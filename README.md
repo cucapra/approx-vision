@@ -5,7 +5,7 @@ Approximate Vision
 This is a code repository for our Summer 2016 project on
 approximate vision.
 
- * test-link
+ * https://gitlab.com/mbuckler/approx-vision.git
 
 ### Contributors 
 
