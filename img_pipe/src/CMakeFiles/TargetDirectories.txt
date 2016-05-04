@@ -1,4 +1,0 @@
-/Users/Suren/Documents/approx-vision/img_pipe/src/CMakeFiles/main.dir
-/Users/Suren/Documents/approx-vision/img_pipe/src/CMakeFiles/edit_cache.dir
-/Users/Suren/Documents/approx-vision/img_pipe/src/CMakeFiles/rebuild_cache.dir
-/Users/Suren/Documents/approx-vision/img_pipe/src/CMakeFiles/DisplayImage.dir
