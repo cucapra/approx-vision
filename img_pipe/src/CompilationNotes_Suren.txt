@@ -1,0 +1,8 @@
+For command line compilation using MAC: 
+(need to compile OpenCV in the build directory with following command: 
+cmake -DWITH_IPP=ON -DINSTALL_CREATE_DISTRIB=ON . && make -j $(nproc) && sudo make install ) 
+
+Then you can run the following command line to compile:
+g++ `pkg-config --cflags --libs opencv` -stdlib=libstdc++ DisplayImage.cpp -o DisplayImage
+
+The other way to compile is using Cmake. After editing CMakeLists.txt, run "cmake ." and then "make". 
