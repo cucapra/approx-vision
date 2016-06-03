@@ -1,17 +1,85 @@
-/////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////
 //  Image Processing Pipeline Simulator
 //
-//  Built using multiple image processing stage simulators
-//  which leverage the OpenCV library
-//
-//  Open CV docs: http://docs.opencv.org/3.1.0/
+//    This code simulates the image processing pipeline from sensor to 
+//    output image. Input is expected to be raw camera pixel values which
+//    are interpreted as irradiance values. The current version receives
+//    a single file and produces processed or unprocessed versions
+//    (using LibRaw) which are then compressed or left uncompressed
+//    (using OpenCV).
 //  
+//  LibRaw docs: http://www.libraw.org/docs/API-CXX-eng.html
+//  OpenCV docs: http://docs.opencv.org/3.1.0/
+//
 //  Author: Mark Buckler
 //
-/////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////
 
 #include <stdio.h>
 #include <opencv2/opencv.hpp>
+#include <libraw/libraw.h>
+
+/////////////////////////////////////////////////////////////////////////
+// Function to load and process input raw file
+/////////////////////////////////////////////////////////////////////////
+
+CV_EXPORTS_W int load_and_proc(const char * path, cv::Mat & output, int process)
+{
+  // Establish use of LibRaw
+  LibRaw RawProcessor;
+  #define imdat RawProcessor.imgdata
+
+  // Function failure flag
+  int ret;
+
+  ///////////////////////////////////////////////////////////////////////
+  // LibRaw dcraw settings
+  ///////////////////////////////////////////////////////////////////////
+
+  //   If no processing is to be done
+  if (process == 0) {
+    // Disable demosiac
+    imdat.params.no_interpolation = 1;
+    // Disable automatic brightening
+    imdat.params.no_auto_bright   = 1;
+    // Disable color scaling from camera maximum to 64k
+    imdat.params.no_auto_scale    = 1;
+  }
+  //   If processing is to be done
+  else if (process == 1) {
+    // Use camera white balance (automatic version also available)
+    imdat.params.use_camera_wb    = 1;
+  }
+
+  ///////////////////////////////////////////////////////////////////////
+
+  // Read in raw image with LibRaw
+  if ((ret = RawProcessor.open_file(path)) != LIBRAW_SUCCESS)
+  {
+      fprintf(stderr, path, libraw_strerror(ret));
+      return -1;
+  }
+  if ((ret = RawProcessor.unpack()) != LIBRAW_SUCCESS)
+  {
+      return -1;
+  }
+
+  // Process the raw image according to dcraw settings specified above
+  int check = RawProcessor.dcraw_process();
+  libraw_processed_image_t *image_ptr = RawProcessor.dcraw_make_mem_image(&check);
+
+  // Convert the raw image to an OpenCV Mat
+  //   Note: The argument CV_8UC3 parses as follows
+  //   CV_<bit-depth>{U|S|F}C(<number_of_channels>)
+  output = cv::Mat(cv::Size(image_ptr->width, image_ptr->height), 
+    CV_8UC3, image_ptr->data, cv::Mat::AUTO_STEP);
+
+  // Convert from the default RGB color space to the correct BGR color space
+  //   This conversion is trivial and therefore can be done
+  //   even in pipelines where no color mapping is requested.
+  cv::cvtColor(output, output, CV_RGB2BGR);
+}
+
 
 using namespace cv;
 
@@ -25,69 +93,31 @@ int main(int argc, char** argv )
       return -1;
   }
 
-  // Read in image
-  Mat in_img;
-  in_img = imread( argv[1], 1 );
-  if ( !in_img.data )
-  {
-      printf("No image data \n");
-      return -1;
-  }
+  // Declare mat for input image
+  Mat in_img; 
 
-  // Process image with desired stages
-  Mat sense_o, amp_o, adc_o, demos_o, denos_o, white_o;
-  Mat color_o, comp_o, vis_o;
+  ///////////////////////////////////////////////////////////////////////
+  // Without Pipeline Processing
+  ///////////////////////////////////////////////////////////////////////
 
-  ///////////////////////////////////////////////////////////
-  // Mixed Signal Sensing
-  ///////////////////////////////////////////////////////////
+  // Read in image and export the unprocessed version
+  load_and_proc(argv[1], in_img, 0);
 
-  // Photodiode sensing 
-  // I: Irradiance, O: Voltage
-  sense_o = in_img;
-  
-  // Amplifier 
-  // I: Voltage, O: Voltage
-  amp_o = sense_o;
+  // Print the compressed and uncompressed versions to file
+  imwrite( "../imgs/pipe_out_unproc.jpg", in_img );
+  imwrite( "../imgs/pipe_out_unproc.tiff", in_img );
 
-  // ADC
-  // I: Voltage, O: Quantized digital values
-  adc_o = amp_o;
+  ///////////////////////////////////////////////////////////////////////
+  // With Pipeline Processing
+  ///////////////////////////////////////////////////////////////////////
 
-  ///////////////////////////////////////////////////////////
-  // Image Sensor Processing (ISP)
-  ///////////////////////////////////////////////////////////
+  // Read in image and export the processed version
+  load_and_proc(argv[1], in_img, 1);
 
-  // Demosiacing
-  // cv::demosaicing
-  demos_o = adc_o;
+  // Print the compressed and uncompressed versions to file
+  imwrite( "../imgs/pipe_out_proc.jpg", in_img );
+  imwrite( "../imgs/pipe_out_proc.tiff", in_img );
 
-  // Denoising
-  // cv::denoise_TVL1, cv::fastNlMeansDenoising, cv::fastNlMeansDenoisingColored
-  denos_o = demos_o;
-  
-  // White balancing
-  // cv::balanceWhite
-  white_o = denos_o;
-  
-  // Color mapping
-  cvtColor( white_o, color_o, CV_BGR2GRAY );
-
-  // Compression
-  comp_o = color_o;
-  imwrite( "../../imgs/pipe_output.jpg", color_o );
-
-  ///////////////////////////////////////////////////////////
-  // CPU/GPU/VPU Processing
-  ///////////////////////////////////////////////////////////
-
-  // Actual computer vision application. Blank for now
-
-  // Display resulting image 
-  namedWindow("Display Image", WINDOW_AUTOSIZE );
-  imshow("Display Image", comp_o);
-  waitKey(0);
 
   return 0;
-
 }
