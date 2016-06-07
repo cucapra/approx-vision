@@ -96,16 +96,20 @@ int main(int argc, char** argv )
   // Declare mat for input image
   Mat in_img; 
 
+  // Path to input file
+  std::string in_path = std::string(argv[1]);
+
   ///////////////////////////////////////////////////////////////////////
   // Without Pipeline Processing
   ///////////////////////////////////////////////////////////////////////
 
   // Read in image and export the unprocessed version
-  load_and_proc(argv[1], in_img, 0);
+  load_and_proc(in_path.c_str(), in_img, 0);
 
   // Print the compressed and uncompressed versions to file
-  imwrite( "../imgs/pipe_out_unproc.jpg", in_img );
-  imwrite( "../imgs/pipe_out_unproc.tiff", in_img );
+  //imwrite( "../imgs/pipe_out_unproc.jpg", in_img );
+  imwrite( (in_path+".unproc.jpg" ).c_str(), in_img );
+  imwrite( (in_path+".unproc.tiff").c_str(), in_img );
 
   ///////////////////////////////////////////////////////////////////////
   // With Pipeline Processing
@@ -115,8 +119,8 @@ int main(int argc, char** argv )
   load_and_proc(argv[1], in_img, 1);
 
   // Print the compressed and uncompressed versions to file
-  imwrite( "../imgs/pipe_out_proc.jpg", in_img );
-  imwrite( "../imgs/pipe_out_proc.tiff", in_img );
+  imwrite( (in_path+".proc.jpg" ).c_str(), in_img );
+  imwrite( (in_path+".proc.tiff").c_str(), in_img );
 
 
   return 0;
