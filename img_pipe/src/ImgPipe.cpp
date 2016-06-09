@@ -12,13 +12,13 @@
 //    Single raw image file (tested with Nikon .NEF)
 //  
 //  Output:
-//    infilename.raw_12B_3C.tiff: 
+//    <infilename>.raw_12B_3C.tiff: 
 //      The raw data in uncompressed 12 bit, represented with 3 rgb channels
-//    infilename.bgr_12B_3C.tiff:
+//    <infilename>.bgr_12B_3C.tiff:
 //      The result of OpenCV demosiacing (debayering)
-//    infilename.dcraw_12B.tiff:
+//    <infilename>.dcraw_12B.tiff:
 //      The result of LibRaw dcraw processing (open source image processing) 
-//    infilename.dcraw_12B.jpg:
+//    <infilename>.dcraw_12B.jpg:
 //      The result of LibRaw dcraw, but compressed as a jpg
 //
 //  LibRaw docs: http://www.libraw.org/docs/API-CXX-eng.html
@@ -76,7 +76,7 @@ int main(int argc, char** argv )
 
  
   ////////////////////////////////////////////////////////////////////
-  //  Raw: 12, 8, and 4 bit  /////////////////////////////////////////
+  //  Raw data  //////////////////////////////////////////////////////
 
   // Extract raw data stored in 16 bit, 4 channel image
   Mat raw_12B_4C = Mat(
