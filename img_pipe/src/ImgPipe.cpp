@@ -71,7 +71,7 @@ int main(int argc, char** argv )
       return -1; 
   }
 
-  // Place the raw_image into 3 channel data structure
+  // Place the raw_image into 4 channel image
   RawProcessor.raw2image();
 
  
@@ -79,6 +79,10 @@ int main(int argc, char** argv )
   //  Raw data  //////////////////////////////////////////////////////
 
   // Extract raw data stored in 16 bit, 4 channel image
+  //   NOTE: Data here is taken from imgdata.image instead of 
+  //   imgdata.raw_image. This is OK because no processing has
+  //   been performed, and is useful to enable access to data in 
+  //   the 4 channel format._
   Mat raw_12B_4C = Mat(
     imgdata.sizes.height,
     imgdata.sizes.width,
@@ -95,7 +99,7 @@ int main(int argc, char** argv )
   Mat zeros     = Mat::zeros(Size(raw_12B_4C.cols, raw_12B_4C.rows), CV_16UC1);
 
   // Merge the three channels into the final raw image
-  // NOTE: OpenCV holds images in BGR order rather than more common RGB
+  //   NOTE: OpenCV holds images in BGR order rather than more common RGB
   Mat         raw_12B_3C;
   vector<Mat> bgrChannels;
   // Blue channel
