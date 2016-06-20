@@ -18,21 +18,35 @@
 
 function ImgPipe_Matlab
     % Model directory
-    model_dir     = '../camera_models/NikonD40/Fl(L14)/';
+    model_dir     = '../camera_models/NikonD7000/';
 
     % Image directory
-    image_dir     = '../imgs/';
-
+    image_dir     = '../imgs/NikonD7000FL/';
+    %image_dir     = '../imgs/';
+    
     % Input image
-    in_image_name = 'beer_hall.NEF.raw_1C.tiff';
+    in_image_name = 'DSC_0906.NEF.raw_1C.tiff';
+    %in_image_name = 'flower.NEF.raw_1C.tiff';
+    
+    % Reference
+    ref_image_name = 'DSC_0906.JPG';
+    %ref_image_name = 'flower.TIF';
 
-    ForwardPipe(model_dir, image_dir, in_image_name);
+    ForwardPipe(model_dir, image_dir, in_image_name, ref_image_name);
+    
     
 end
 
 
 
-function ForwardPipe(model_dir, image_dir, in_image_name)
+function ForwardPipe(model_dir, image_dir, in_image_name, ref_image_name)
+
+    % Define patch size for analysis
+    ystart = 2000;
+    yend   = 2200;
+    xstart =  500;
+    xend   =  700;
+
     %==============================================================
     % Import Forward Model Data
     %
@@ -79,10 +93,11 @@ function ForwardPipe(model_dir, image_dir, in_image_name)
     weights        = coeficients_file(1:(size(coeficients_file,1)-4),:);
 
     % Gamut mapping: c
-    c              = transpose(coeficients_file((size(coeficients_file,1)-3):end,:));
+    c              = coeficients_file((size(coeficients_file,1)-3):end,:);
 
-    % Tone mapping
-    f              = resp_funct_file;
+    % Tone mapping (reverse function is what is contained within model
+    % file)
+    frev           = resp_funct_file;
 
     %==============================================================
     % Import Raw Image Data
@@ -90,27 +105,39 @@ function ForwardPipe(model_dir, image_dir, in_image_name)
     % NOTE: Can use RAW2TIFF.cpp to convert raw to tiff. This isn't
     % automatically called by this script yet, but could be.
 
-    in_image = imread(strcat(image_dir,in_image_name));
-
+    in_image         = imread(strcat(image_dir,in_image_name));
+    
+    %==============================================================
+    % Import Reference image
+    
+    ref_image        = imread(strcat(image_dir,ref_image_name));
+    
+    % Downsize to match patch size
+    ref_image        = ref_image(ystart:yend,xstart:xend,:);
+    
     %==============================================================
     % Forward pipeline function
 
     % Scale input image from 12 bit values to 16 bit values
     % (multiply by 2^4)
-    in_scaled        = in_image * 16;
+    in_scaled         = in_image * 8;
+    %%%%%%% NOTE: D7000 has 14 bits not 12,
+    %in_scaled        = in_image * 4;
 
-    % Convert to uint16 representation
+    % Convert to uint16 representation for demosaicing
     in_image_unit16  = im2uint16(in_scaled);
-
-    % Demosaic image
-    demosaiced       = demosaic(in_image_unit16,'gbrg');
+    imwrite(in_image_unit16,strcat(image_dir,in_image_name,'.inimg.tif'));
     
-    % Print to image for comparison
-    imwrite(demosaiced,strcat(image_dir,in_image_name,'.demosaic.tif'));
-  
-    % Cast to float for rest of processing
+    % Demosaic image
+    demosaiced       = demosaic(in_image_unit16,'rggb');%gbrg %rggb
+    
+    % Convert to double precision for transforming and gamut mapping
     image_float      = im2double(demosaiced);
-
+    imwrite(image_float,strcat(image_dir,in_image_name,'.demosaicfull.tif'));
+    
+    % Downsize image for debugging
+    image_float      = image_float(ystart:yend,xstart:xend,:);
+  
     % Apply color space transform and white balance transform
 
     % Pre-allocate memory
@@ -120,23 +147,19 @@ function ForwardPipe(model_dir, image_dir, in_image_name)
     gamutmapped      = zeros(height,width,3);
     tonemapped       = zeros(height,width,3);
     
-    % Debugging code
-%      image_float(1,1,:) = transpose([1,1,1]);
-%      transpose(squeeze(image_float(1,1,:)))
-%      [1,1,1]*TsTw
-%      transformed(1,1,:) = transpose(squeeze(image_float(1,1,:))) * TsTw;
-%      transpose(squeeze(transformed(1,1,:)))
     
-    % Better way to do this?
     for y = 1:height
-        for x = 1:(width) 
+        for x = 1:width 
+            
             % transformed = RAWdemosaiced * Ts * Tw
-
             transformed(y,x,:) = transpose(squeeze(image_float(y,x,:))) * TsTw;
 
             % gamut mapping
-            %gamutmapped(y,x,:) = h(squeeze(transformed(y,x,:)), ...
-            %    ctrl_points, weights, c);
+            gamutmapped(y,x,:) = h(squeeze(transformed(y,x,:)), ...
+                ctrl_points, weights, c);
+            
+            % tone mapping
+            tonemapped(y,x,:)  = tonemap(im2uint8(squeeze(gamutmapped(y,x,:))), frev);
             
         end
         % Let user know how far along we are
@@ -144,58 +167,58 @@ function ForwardPipe(model_dir, image_dir, in_image_name)
     end
 
     
-    % Tone Mapping
-%     tonemapped         = im2uint8(gamutmapped);
-%     f                  = im2uint8(f);
-%     for y = 1:height
-%         for x = 1:(width/2) % Only process left half for debugging
-%             for color = 1:3 % 1-R, 2-G, 3-B
-%                 %y
-%                 %x
-%                 %color
-%                 %tonemapped(y,x,color)
-%                 %f(tonemapped(y,x,color),color)
-%                 
-%                 % Correct index if the value at the pixel is zero
-%                 if tonemapped(y,x,color) == 0 
-%                     index = 1;
-%                 else
-%                     index = tonemapped(y,x,color);
-%                 end
-%                 % Map tone
-%                 tonemapped(y,x,color) = f(index,color);
-%             end
-%         end
-%     end
-    
-    
-    % Prepare output
-    out_image = im2uint8(transformed);
-    
-    
     %==============================================================
-    % Export Image
+    % Export Image(s)
+    
+    ref_image   = im2uint16(ref_image);
+    image_float = im2uint16(image_float);
+    transformed = im2uint16(transformed);
+    gamutmapped = im2uint16(gamutmapped);
+    tonemapped  = im2uint16(tonemapped);
+    imwrite(ref_image,  strcat(image_dir,in_image_name,'.1.ref.tif'));
+    imwrite(image_float,strcat(image_dir,in_image_name,'.2.demosaic.tif'));
+    imwrite(transformed,strcat(image_dir,in_image_name,'.3.tranfmed.tif'));
+    imwrite(gamutmapped,strcat(image_dir,in_image_name,'.4.gamut.tif'));
+    imwrite(tonemapped, strcat(image_dir,in_image_name,'.5.toned.tif'));
 
-    imwrite(out_image,strcat(image_dir,in_image_name,'.output.tif'));
 end
 
-
+% Gamut mapping function
 function out = h (in, ctrl_points, weights, c)
 
-    out      = zeros(1,3);
-    in_tilda = [1,transpose(in)];
+    out      = zeros(3,1);
 
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    % Biases
-    for color = 1:3
-        out(color) = dot(in_tilda,c(color,:));
-    end
-    
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     % Weighted control points
     for idx = 1:size(ctrl_points,1)
-        dist = in - ctrl_points(idx);
-        out  = out + dot(weights(idx,:),dist);
+        dist = norm(transpose(in) - ctrl_points(idx,:));
+        for color = 1:3
+            out(color)  = out(color) + weights(idx,color) * dist;
+        end
     end
     
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    % Biases
+    for color = 1:3
+        out(color) = out(color) +  c(1,color);
+        out(color) = out(color) + (c(2,color) * in(1));
+        out(color) = out(color) + (c(3,color) * in(2));
+        out(color) = out(color) + (c(4,color) * in(3));
+    end
+    
+end
+
+% Tone mapping function
+function out = tonemap (in, f)
+
+    out = zeros(3,1);
+
+    for color = 1:3 % 1-R, 2-G, 3-B
+        % Find index of value which is closest to the input
+        [~,idx] = min(abs(f(:,color)-im2double(in(color))));
+        
+        % Convert the index to float representation of image value
+        out(color) = (idx+1)/256;
+    end
+
 end
