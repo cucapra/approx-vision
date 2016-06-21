@@ -18,34 +18,91 @@
 
 function ImgPipe_Matlab
     % Model directory
-    model_dir     = '../camera_models/NikonD7000/';
+    model_dir      = '../camera_models/NikonD7000/';
 
     % Image directory
-    image_dir     = '../imgs/NikonD7000FL/';
+    image_dir      = '../imgs/NikonD7000FL/';
     %image_dir     = '../imgs/';
     
     % Input image
-    in_image_name = 'DSC_0906.NEF.raw_1C.tiff';
+    in_image_name  = 'DSC_0916.NEF.raw_1C.tiff';
     %in_image_name = 'flower.NEF.raw_1C.tiff';
     
     % Reference
-    ref_image_name = 'DSC_0906.JPG';
+    ref_image_name = 'DSC_0916.JPG';
     %ref_image_name = 'flower.TIF';
-
-    ForwardPipe(model_dir, image_dir, in_image_name, ref_image_name);
     
+    % Output data file
+    out_data_name  = 'pipeline_data.txt';
+    
+    % Patch start locations
+    %   [xstart,ystart]
+    patchstarts = [ ...
+        [550,  2750]; ... % 1
+        [1000, 2750]; ... % 2
+        [1500, 2750]; ... % 3
+        [2000, 2750]; ... % 4
+        [550,  2250]; ... % 5
+        [1000, 2250]; ... % 6
+        [1500, 2250]; ... % 7
+        [2000, 2250]; ... % 8
+    ];
+    
+    % Number of patch tests to run
+    patchnum = 8;
+
+    % Define patch size (patch width and height in pixels
+    patchsize = 50;
+    
+    % Initialize results
+    results  = zeros(patchnum,2,3);
+
+    % Process patches
+    for i=1:patchnum
+    
+        % Run the model on the patch
+        [resultavg, refavg] = ForwardPipe(model_dir, image_dir, ...
+            in_image_name, ref_image_name, ... 
+            patchstarts(i,2), patchstarts(i,1), patchsize, i);
+        
+        results(i,1,:) = resultavg;
+        results(i,2,:) = refavg;
+    
+    end
+    
+    outfileID = fopen(out_data_name, 'w');
+    
+    % Display results
+    fprintf(outfileID, 'res(red), res(green), res(blue)\n');
+    fprintf(outfileID, 'ref(red), ref(green), ref(blue)\n');
+    fprintf(outfileID, 'err(red), err(green), err(blue)\n');
+    fprintf(outfileID, '\n');
+    for i=1:patchnum
+       fprintf(outfileID, 'Patch %d: \n', i);
+       % Print results
+       fprintf(outfileID, '%4.2f, %4.2f, %4.2f \n', ... 
+           results(i,1,1), results(i,1,2), results(i,1,3));
+       % Print reference
+       fprintf(outfileID, '%4.2f, %4.2f, %4.2f \n', ... 
+           results(i,2,1), results(i,2,2), results(i,2,3));
+       % Print error
+       fprintf(outfileID, '%4.2f, %4.2f, %4.2f \n', ... 
+           geterror(results(i,1,1), results(i,2,1)), ...
+           geterror(results(i,1,2), results(i,2,2)), ...
+           geterror(results(i,1,3), results(i,2,3)));
+       fprintf(outfileID, '\n');
+    end
     
 end
 
 
 
-function ForwardPipe(model_dir, image_dir, in_image_name, ref_image_name)
+function [resultavg, refavg] = ForwardPipe(model_dir, image_dir, ...
+    in_image_name, ref_image_name, ystart, xstart, patchsize, patchid)
 
-    % Define patch size for analysis
-    ystart = 2000;
-    yend   = 2200;
-    xstart =  500;
-    xend   =  700;
+    % Establish patch
+    xend = xstart + patchsize;
+    yend = ystart + patchsize;
 
     %==============================================================
     % Import Forward Model Data
@@ -120,16 +177,17 @@ function ForwardPipe(model_dir, image_dir, in_image_name, ref_image_name)
 
     % Scale input image from 12 bit values to 16 bit values
     % (multiply by 2^4)
-    in_scaled         = in_image * 8;
-    %%%%%%% NOTE: D7000 has 14 bits not 12,
-    %in_scaled        = in_image * 4;
+    %in_scaled         = in_image * 16;
+    %%%%%%% NOTE: D7000 has 14 bits not 12
+    % (multiply by 2^2)
+    in_scaled        = in_image * 4;
 
     % Convert to uint16 representation for demosaicing
     in_image_unit16  = im2uint16(in_scaled);
     imwrite(in_image_unit16,strcat(image_dir,in_image_name,'.inimg.tif'));
     
     % Demosaic image
-    demosaiced       = demosaic(in_image_unit16,'rggb');%gbrg %rggb
+    demosaiced       = demosaic(in_image_unit16,'rggb');%gbrg %rggb 
     
     % Convert to double precision for transforming and gamut mapping
     image_float      = im2double(demosaiced);
@@ -165,22 +223,37 @@ function ForwardPipe(model_dir, image_dir, in_image_name, ref_image_name)
         % Let user know how far along we are
         disp((y/size(image_float,1))*100)
     end
-
     
     %==============================================================
     % Export Image(s)
     
-    ref_image   = im2uint16(ref_image);
-    image_float = im2uint16(image_float);
-    transformed = im2uint16(transformed);
-    gamutmapped = im2uint16(gamutmapped);
-    tonemapped  = im2uint16(tonemapped);
-    imwrite(ref_image,  strcat(image_dir,in_image_name,'.1.ref.tif'));
-    imwrite(image_float,strcat(image_dir,in_image_name,'.2.demosaic.tif'));
-    imwrite(transformed,strcat(image_dir,in_image_name,'.3.tranfmed.tif'));
-    imwrite(gamutmapped,strcat(image_dir,in_image_name,'.4.gamut.tif'));
-    imwrite(tonemapped, strcat(image_dir,in_image_name,'.5.toned.tif'));
+    ref_image   = im2uint8(ref_image);
+    image_float = im2uint8(image_float);
+    transformed = im2uint8(transformed);
+    gamutmapped = im2uint8(gamutmapped);
+    tonemapped  = im2uint8(tonemapped);
+%     imwrite(ref_image,  strcat(image_dir,in_image_name,'.ref.tif'));
+%     imwrite(image_float,strcat(image_dir,in_image_name,'.demosaic.tif'));
+%     imwrite(transformed,strcat(image_dir,in_image_name,'.tranfmed.tif'));
+%     imwrite(gamutmapped,strcat(image_dir,in_image_name,'.gamut.tif'));
+%     imwrite(tonemapped, strcat(image_dir,in_image_name,'.toned.tif'));
 
+    imwrite(ref_image,  strcat(image_dir,in_image_name, ... 
+        '.p',int2str(patchid),'.reference.tif'));
+    imwrite(tonemapped,  strcat(image_dir,in_image_name, ... 
+        '.p',int2str(patchid),'.result.tif'));
+    
+    %==============================================================
+    % Produce pixel averages
+    refavg    = zeros(3,1);
+    resultavg = zeros(3,1);
+    
+    % Take two dimensional average
+    for color = 1:3 % 1-R, 2-G, 3-B
+        refavg(color)    = mean(mean(ref_image(:,:,color)));
+        resultavg(color) = mean(mean(tonemapped(:,:,color)));
+    end
+    
 end
 
 % Gamut mapping function
@@ -220,5 +293,13 @@ function out = tonemap (in, f)
         % Convert the index to float representation of image value
         out(color) = (idx+1)/256;
     end
+
+end
+
+% Error computation function
+function error = geterror(result, reference)
+
+    diff  = result-reference;
+    error = (diff/reference)*100;
 
 end
