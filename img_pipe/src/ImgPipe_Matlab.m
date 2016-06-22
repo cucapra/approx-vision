@@ -210,7 +210,7 @@ function [resultavg, refavg] = ForwardPipe(model_dir, image_dir, ...
         for x = 1:width 
             
             % transformed = RAWdemosaiced * Ts * Tw
-            transformed(y,x,:) = transpose(squeeze(image_float(y,x,:))) * TsTw;
+            transformed(y,x,:) = transpose(squeeze(image_float(y,x,:))) * transpose(TsTw);
 
             % gamut mapping
             gamutmapped(y,x,:) = h(squeeze(transformed(y,x,:)), ...
