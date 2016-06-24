@@ -49,28 +49,38 @@ function ImgPipe_Matlab
     ];
     
     % Number of patch tests to run
-    patchnum = 8;
+    patchnum = 4;
 
     % Define patch size (patch width and height in pixels
-    patchsize = 30;
+    patchsize = 20;
     
     % Initialize results
-    results  = zeros(patchnum,2,3);
+    results  = zeros(patchnum,3,3);
 
     % Process patches
     for i=1:patchnum
     
         % Run the model on the patch
-        [resultavg, refavg] = ForwardPipe(model_dir, image_dir, ...
+        [demosaiced, transformed, gamutmapped, tonemapped, forward_ref_image] = ...
+            ForwardPipe(model_dir, image_dir, ...
             raw_image_name, jpg_image_name, ... 
             patchstarts(i,2), patchstarts(i,1), patchsize, i);
         
-%         [resultavg, refavg] = BackwardPipe(model_dir, image_dir, ...
-%             jpg_image_name, raw_image_name, ... 
-%             patchstarts(i,2), patchstarts(i,1), patchsize, i);
+        forced_input = im2double(tonemapped);
         
+        [revtonemapped, revgamutmapped, revtransformed, remosaiced, ref_image_colored] = ...
+            BackwardPipe(forced_input, model_dir, image_dir, ...
+            jpg_image_name, raw_image_name, ... 
+            patchstarts(i,2), patchstarts(i,1), patchsize, i);
+        
+        [refavg, resultavg, error] = ...
+            getpatchdata(remosaiced, ref_image_colored);
+            %            result,     reference
+            %            tonemapped, forward_ref_image
+
         results(i,1,:) = resultavg;
         results(i,2,:) = refavg;
+        results(i,3,:) = error;
     
     end
     
@@ -91,17 +101,15 @@ function ImgPipe_Matlab
            results(i,2,1), results(i,2,2), results(i,2,3));
        % Print error
        fprintf(outfileID, '%4.2f, %4.2f, %4.2f \n', ... 
-           geterror(results(i,1,1), results(i,2,1)), ...
-           geterror(results(i,1,2), results(i,2,2)), ...
-           geterror(results(i,1,3), results(i,2,3)));
+           results(i,3,1), results(i,3,2), results(i,3,3));
        fprintf(outfileID, '\n');
     end
     
 end
 
 
-
-function [resultavg, refavg] = ForwardPipe(model_dir, image_dir, ...
+function [demosaiced, transformed, gamutmapped, tonemapped, ref_image] = ...
+    ForwardPipe(model_dir, image_dir, ...
     in_image_name, ref_image_name, ystart, xstart, patchsize, patchid)
 
     % Establish patch
@@ -191,13 +199,14 @@ function [resultavg, refavg] = ForwardPipe(model_dir, image_dir, ...
     imwrite(in_image_unit16,strcat(image_dir,in_image_name,'.inimg.tif'));
     
     % Demosaic image
-    demosaiced       = demosaic(in_image_unit16,'rggb');%gbrg %rggb 
+    demosaiced       = im2uint8(demosaic(in_image_unit16,'rggb'));%gbrg %rggb 
     
     % Convert to double precision for transforming and gamut mapping
     image_float      = im2double(demosaiced);
     imwrite(image_float,strcat(image_dir,in_image_name,'.demosaicfull.tif'));
     
-    % Downsize image for debugging
+    % Downsize image to patch size
+    demosaiced       = demosaiced(ystart:yend,xstart:xend,:);
     image_float      = image_float(ystart:yend,xstart:xend,:);
 
     % Pre-allocate memory
@@ -246,20 +255,21 @@ function [resultavg, refavg] = ForwardPipe(model_dir, image_dir, ...
     imwrite(tonemapped,  strcat(image_dir,in_image_name, ... 
         '.p',int2str(patchid),'.result.tif'));
     
-    %==============================================================
-    % Produce pixel averages
-    refavg    = zeros(3,1);
-    resultavg = zeros(3,1);
+%     %==============================================================
+%     % Produce pixel averages
+%     refavg    = zeros(3,1);
+%     resultavg = zeros(3,1);
+%     
+%     % Take two dimensional average
+%     for color = 1:3 % 1-R, 2-G, 3-B
+%         refavg(color)    = mean(mean(ref_image(:,:,color)));
+%         resultavg(color) = mean(mean(tonemapped(:,:,color)));
+%     end
     
-    % Take two dimensional average
-    for color = 1:3 % 1-R, 2-G, 3-B
-        refavg(color)    = mean(mean(ref_image(:,:,color)));
-        resultavg(color) = mean(mean(tonemapped(:,:,color)));
-    end
-    
-end
+end 
 
-function [resultavg, refavg] = BackwardPipe(model_dir, image_dir, ...
+function [revtonemapped, revgamutmapped, revtransformed, remosaiced, ref_image_colored] = ...
+    BackwardPipe(forced_input, model_dir, image_dir, ...
     in_image_name, ref_image_name, ystart, xstart, patchsize, patchid)
 
     % Establish patch
@@ -323,12 +333,12 @@ function [resultavg, refavg] = BackwardPipe(model_dir, image_dir, ...
 
     in_image         = imread(strcat(image_dir,in_image_name));
     ref_image        = imread(strcat(image_dir,ref_image_name));
- 
-    % Scale reference image to 16 bits
-    % Note: this currently assumes 14 bit raw reference
-    % (multiply by 2^2)
-    %ref_image        = im2double(ref_image);
-
+    
+    % Scale reference input, as the raw input may not fill the 16 bits
+    % The D7000 uses 14 bits, so multiply input by 4
+    ref_image        = ref_image * 4;
+    
+    ref_image        = im2double(ref_image);
     
     %==============================================================
     % Backward pipeline function
@@ -337,7 +347,7 @@ function [resultavg, refavg] = BackwardPipe(model_dir, image_dir, ...
     image_float      = im2double(in_image);
     
     % Extract patches
-    image_float      = image_float(ystart:yend,xstart:xend,:);
+    image_float      = forced_input;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%image_float(ystart:yend,xstart:xend,:); DEBUGGING
     ref_image        = ref_image  (ystart:yend,xstart:xend);
 
     % Pre-allocate memory
@@ -361,8 +371,8 @@ function [resultavg, refavg] = BackwardPipe(model_dir, image_dir, ...
             
             % Reverse color mapping and white balancing
             % RAWdemosaiced = transformed * inv(TsTw) = transformed / TsTw
-            revtransformed(y,x,:) = transpose(squeeze(image_float(y,x,:))) ...
-                / transpose(TsTw);
+            revtransformed(y,x,:) = transpose(squeeze(revgamutmapped(y,x,:))) ...
+                * inv(transpose(TsTw));
             
             % Re-mosaicing
             % Note: This is not currently parameterizable, assumes rggb
@@ -401,8 +411,11 @@ function [resultavg, refavg] = BackwardPipe(model_dir, image_dir, ...
     
     %==============================================================
     % Export Image(s)
-    
+      
     ref_image_colored = im2uint8(ref_image_colored);
+    revtransformed    = im2uint8(revtransformed);
+    revtonemapped     = im2uint8(revtonemapped);
+    revgamutmapped    = im2uint8(revgamutmapped);
     remosaiced        = im2uint8(remosaiced);
 
     imwrite(ref_image_colored,  strcat(image_dir,in_image_name, ... 
@@ -410,16 +423,16 @@ function [resultavg, refavg] = BackwardPipe(model_dir, image_dir, ...
     imwrite(remosaiced,  strcat(image_dir,in_image_name, ... 
         '.p',int2str(patchid),'.result.tif'));
     
-    %==============================================================
-    % Produce pixel averages
-    refavg    = zeros(3,1);
-    resultavg = zeros(3,1);
-    
-    % Take two dimensional average
-    for color = 1:3 % 1-R, 2-G, 3-B
-        refavg(color)    = mean(mean(ref_image_colored(:,:,color)));
-        resultavg(color) = mean(mean(remosaiced(:,:,color)));
-    end
+%     %==============================================================
+%     % Produce pixel averages
+%     refavg    = zeros(3,1);
+%     resultavg = zeros(3,1);
+%     
+%     % Take two dimensional average
+%     for color = 1:3 % 1-R, 2-G, 3-B
+%         refavg(color)    = mean(mean(ref_image_colored(:,:,color)));
+%         resultavg(color) = mean(mean(remosaiced(:,:,color)));
+%     end
     
 end
 
@@ -458,8 +471,13 @@ function out = tonemap (in, revf)
         % Find index of value which is closest to the input
         [~,idx] = min(abs(revf(:,color)-im2double(in(color))));
         
+        % If index is zero, bump up to 1 to prevent 0 indexing in Matlab
+        if idx == 0
+           idx = 1; 
+        end
+        
         % Convert the index to float representation of image value
-        out(color) = (idx+1)/256;
+        out(color) = idx/256;
     end
 
 end
@@ -485,9 +503,20 @@ function out = revtonemap (in, revf)
 end
 
 % Error computation function
-function error = geterror(result, reference)
+function [refavg, resultavg, error] = getpatchdata(resultpatch, referencepatch)
 
-    diff  = result-reference;
-    error = (diff/reference)*100;
+    refavg    = zeros(3,1);
+    resultavg = zeros(3,1);
+    error     = zeros(3,1);
+    
+    for color = 1:3 % 1-R, 2-G, 3-B
+        % Take two dimensional pixel averages
+        refavg(color)    = mean(mean(referencepatch(:,:,color)));
+        resultavg(color) = mean(mean(resultpatch(:,:,color)));
+        % Compute error
+        diff             = resultavg(color)-refavg(color);
+        error(color)     = (diff/refavg(color))*100;
+    end
 
 end
+
