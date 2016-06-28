@@ -37,22 +37,25 @@ function ImgPipe_Matlab
     
     % Patch start locations
     %   [xstart,ystart]
+    % NOTE: Must align patch start in raw file with the demosiac 
+    % pattern start. Otherwise colors will be switched in the 
+    % final result.
     patchstarts = [ ...
-        [550,  2750]; ... % 1
-        [1000, 2750]; ... % 2
-        [1500, 2750]; ... % 3
-        [2000, 2750]; ... % 4
-        [550,  2250]; ... % 5
-        [1000, 2250]; ... % 6
-        [1500, 2250]; ... % 7
-        [2000, 2250]; ... % 8
+        [551,  2751]; ... % 1
+        [1001, 2751]; ... % 2
+        [1501, 2751]; ... % 3
+        [2001, 2751]; ... % 4
+        [551,  2251]; ... % 5
+        [1001, 2251]; ... % 6
+        [1501, 2251]; ... % 7
+        [2001, 2251]; ... % 8
     ];
     
     % Number of patch tests to run
-    patchnum = 4;
+    patchnum = 8;
 
     % Define patch size (patch width and height in pixels
-    patchsize = 20;
+    patchsize = 10;
     
     % Initialize results
     results  = zeros(patchnum,3,3);
@@ -113,8 +116,8 @@ function [demosaiced, transformed, gamutmapped, tonemapped, ref_image] = ...
     in_image_name, ref_image_name, ystart, xstart, patchsize, patchid)
 
     % Establish patch
-    xend = xstart + patchsize;
-    yend = ystart + patchsize;
+    xend = xstart + patchsize - 1;
+    yend = ystart + patchsize - 1;
 
     %==============================================================
     % Import Forward Model Data
@@ -255,16 +258,6 @@ function [demosaiced, transformed, gamutmapped, tonemapped, ref_image] = ...
     imwrite(tonemapped,  strcat(image_dir,in_image_name, ... 
         '.p',int2str(patchid),'.result.tif'));
     
-%     %==============================================================
-%     % Produce pixel averages
-%     refavg    = zeros(3,1);
-%     resultavg = zeros(3,1);
-%     
-%     % Take two dimensional average
-%     for color = 1:3 % 1-R, 2-G, 3-B
-%         refavg(color)    = mean(mean(ref_image(:,:,color)));
-%         resultavg(color) = mean(mean(tonemapped(:,:,color)));
-%     end
     
 end 
 
@@ -273,8 +266,8 @@ function [revtonemapped, revgamutmapped, revtransformed, remosaiced, ref_image_c
     in_image_name, ref_image_name, ystart, xstart, patchsize, patchid)
 
     % Establish patch
-    xend = xstart + patchsize;
-    yend = ystart + patchsize;
+    xend = xstart + patchsize - 1;
+    yend = ystart + patchsize - 1;
 
     %==============================================================
     % Import Backward Model Data
@@ -412,28 +405,21 @@ function [revtonemapped, revgamutmapped, revtransformed, remosaiced, ref_image_c
     %==============================================================
     % Export Image(s)
       
+    ref_image         = im2uint8(ref_image);
     ref_image_colored = im2uint8(ref_image_colored);
     revtransformed    = im2uint8(revtransformed);
     revtonemapped     = im2uint8(revtonemapped);
     revgamutmapped    = im2uint8(revgamutmapped);
     remosaiced        = im2uint8(remosaiced);
 
+    imwrite(ref_image,  strcat(image_dir,in_image_name, ... 
+        '.p',int2str(patchid),'.back_ref.tif'));
     imwrite(ref_image_colored,  strcat(image_dir,in_image_name, ... 
-        '.p',int2str(patchid),'.reference.tif'));
+        '.p',int2str(patchid),'.back_ref_colored.tif'));
     imwrite(remosaiced,  strcat(image_dir,in_image_name, ... 
-        '.p',int2str(patchid),'.result.tif'));
+        '.p',int2str(patchid),'.back_result.tif'));
     
-%     %==============================================================
-%     % Produce pixel averages
-%     refavg    = zeros(3,1);
-%     resultavg = zeros(3,1);
-%     
-%     % Take two dimensional average
-%     for color = 1:3 % 1-R, 2-G, 3-B
-%         refavg(color)    = mean(mean(ref_image_colored(:,:,color)));
-%         resultavg(color) = mean(mean(remosaiced(:,:,color)));
-%     end
-    
+   
 end
 
 
