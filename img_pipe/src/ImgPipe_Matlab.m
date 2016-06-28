@@ -6,7 +6,8 @@
 % "A New In-Camera Imaging Model for Color Computer Vision 
 % and its Application" by Seon Joo Kim, Hai Ting Lin, 
 % Michael Brown, et al. Code for learning a new model can 
-% be found at the original project page.
+% be found at the original project page. This particular 
+% implementation was written by Mark Buckler.
 %
 % Original Project Page:
 % http://www.comp.nus.edu.sg/~brown/radiometric_calibration/
@@ -32,11 +33,9 @@ function ImgPipe_Matlab
     jpg_image_name = 'DSC_0916.JPG';
     %ref_image_name = 'flower.TIF';
     
-    % Output data file
-    out_data_name  = 'pipeline_data.txt';
-    
     % Patch start locations
     %   [xstart,ystart]
+    %
     % NOTE: Must align patch start in raw file with the demosiac 
     % pattern start. Otherwise colors will be switched in the 
     % final result.
@@ -58,54 +57,42 @@ function ImgPipe_Matlab
     patchsize = 10;
     
     % Initialize results
-    results  = zeros(patchnum,3,3);
+    forward_results  = zeros(patchnum,3,3);
+    backward_results = zeros(patchnum,3,3);
 
     % Process patches
     for i=1:patchnum
-    
-        % Run the model on the patch
-%         [demosaiced, transformed, gamutmapped, tonemapped, forward_ref_image] = ...
-%             ForwardPipe(model_dir, image_dir, ...
-%             raw_image_name, jpg_image_name, ... 
-%             patchstarts(i,2), patchstarts(i,1), patchsize, i);
-%         
+
+        % Run the forward model on the patch
+        [demosaiced, transformed, gamutmapped, tonemapped, forward_ref] = ...
+            ForwardPipe(model_dir, image_dir, ...
+            raw_image_name, jpg_image_name, ... 
+            patchstarts(i,2), patchstarts(i,1), patchsize, i);
         
-        [revtonemapped, revgamutmapped, revtransformed, remosaiced, ref_image_colored] = ...
+        % Compare the pipeline output to the reference
+        [refavg, resultavg, error] = ...
+            patch_compare(tonemapped, forward_ref);
+        forward_results(i,1,:) = resultavg;
+        forward_results(i,2,:) = refavg;
+        forward_results(i,3,:) = error;
+        
+        % Run the backward model on the patch
+        [revtonemapped, revgamutmapped, revtransformed, remosaiced, backward_ref] = ...
             BackwardPipe(model_dir, image_dir, ...
             jpg_image_name, raw_image_name, ... 
             patchstarts(i,2), patchstarts(i,1), patchsize, i);
         
+        % Compare the pipeline output to the reference
         [refavg, resultavg, error] = ...
-            patch_compare(remosaiced, ref_image_colored);
-            %             result,     reference
-            %             tonemapped, forward_ref_image
-
-        results(i,1,:) = resultavg;
-        results(i,2,:) = refavg;
-        results(i,3,:) = error;
+            patch_compare(remosaiced, backward_ref);
+        backward_results(i,1,:) = resultavg;
+        backward_results(i,2,:) = refavg;
+        backward_results(i,3,:) = error;
     
     end
     
-    outfileID = fopen(out_data_name, 'w');
-    
-    % Display results
-    fprintf(outfileID, 'res(red), res(green), res(blue)\n');
-    fprintf(outfileID, 'ref(red), ref(green), ref(blue)\n');
-    fprintf(outfileID, 'err(red), err(green), err(blue)\n');
-    fprintf(outfileID, '\n');
-    for i=1:patchnum
-       fprintf(outfileID, 'Patch %d: \n', i);
-       % Print results
-       fprintf(outfileID, '%4.2f, %4.2f, %4.2f \n', ... 
-           results(i,1,1), results(i,1,2), results(i,1,3));
-       % Print reference
-       fprintf(outfileID, '%4.2f, %4.2f, %4.2f \n', ... 
-           results(i,2,1), results(i,2,2), results(i,2,3));
-       % Print error
-       fprintf(outfileID, '%4.2f, %4.2f, %4.2f \n', ... 
-           results(i,3,1), results(i,3,2), results(i,3,3));
-       fprintf(outfileID, '\n');
-    end
+    write_results(forward_results,  patchnum, 'results_forward.txt');
+    write_results(backward_results, patchnum, 'results_backward.txt');
     
 end
 
@@ -246,16 +233,11 @@ function [demosaiced, transformed, gamutmapped, tonemapped, ref_image] = ...
     transformed = im2uint8(transformed);
     gamutmapped = im2uint8(gamutmapped);
     tonemapped  = im2uint8(tonemapped);
-%     imwrite(ref_image,  strcat(image_dir,in_image_name,'.ref.tif'));
-%     imwrite(image_float,strcat(image_dir,in_image_name,'.demosaic.tif'));
-%     imwrite(transformed,strcat(image_dir,in_image_name,'.tranfmed.tif'));
-%     imwrite(gamutmapped,strcat(image_dir,in_image_name,'.gamut.tif'));
-%     imwrite(tonemapped, strcat(image_dir,in_image_name,'.toned.tif'));
-
-    imwrite(ref_image,  strcat(image_dir,in_image_name, ... 
-        '.p',int2str(patchid),'.reference.tif'));
-    imwrite(tonemapped,  strcat(image_dir,in_image_name, ... 
-        '.p',int2str(patchid),'.result.tif'));
+    
+%     imwrite(ref_image,  strcat(image_dir,in_image_name, ... 
+%         '.p',int2str(patchid),'.reference.tif'));
+%     imwrite(tonemapped,  strcat(image_dir,in_image_name, ... 
+%         '.p',int2str(patchid),'.result.tif'));
     
     
 end 
@@ -411,23 +393,22 @@ function [revtonemapped, revgamutmapped, revtransformed, remosaiced, ref_image_c
     revgamutmapped    = im2uint8(revgamutmapped);
     remosaiced        = im2uint8(remosaiced);
 
-    imwrite(ref_image,  strcat(image_dir,in_image_name, ... 
-        '.p',int2str(patchid),'.back_ref.tif'));
-    imwrite(ref_image_colored,  strcat(image_dir,in_image_name, ... 
-        '.p',int2str(patchid),'.back_ref_colored.tif'));
-    imwrite(remosaiced,  strcat(image_dir,in_image_name, ... 
-        '.p',int2str(patchid),'.back_result.tif'));
+%     imwrite(ref_image,  strcat(image_dir,in_image_name, ... 
+%         '.p',int2str(patchid),'.back_ref.tif'));
+%     imwrite(ref_image_colored,  strcat(image_dir,in_image_name, ... 
+%         '.p',int2str(patchid),'.back_ref_colored.tif'));
+%     imwrite(remosaiced,  strcat(image_dir,in_image_name, ... 
+%         '.p',int2str(patchid),'.back_result.tif'));
     
    
 end
 
 
-% Gamut mapping function
+% Radial basis function for forward and reverse gamut mapping
 function out = RBF (in, ctrl_points, weights, c)
 
     out      = zeros(3,1);
 
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     % Weighted control points
     for idx = 1:size(ctrl_points,1)
         dist = norm(transpose(in) - ctrl_points(idx,:));
@@ -435,8 +416,7 @@ function out = RBF (in, ctrl_points, weights, c)
             out(color)  = out(color) + weights(idx,color) * dist;
         end
     end
-    
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
     % Biases
     for color = 1:3
         out(color) = out(color) +  c(1,color);
@@ -447,7 +427,7 @@ function out = RBF (in, ctrl_points, weights, c)
     
 end
 
-% Tone mapping function
+% Forward mapping function
 function out = tonemap (in, revf)
 
     out = zeros(3,1);
@@ -467,7 +447,7 @@ function out = tonemap (in, revf)
 
 end
 
-% Tone mapping function
+% Reverse tone mapping function
 function out = revtonemap (in, revf)
 
     out = zeros(3,1);
@@ -487,7 +467,7 @@ function out = revtonemap (in, revf)
 
 end
 
-% Error computation function
+% Patch color analysis and comparison function
 function [refavg, resultavg, error] = patch_compare(resultpatch, referencepatch)
 
     refavg    = zeros(3,1);
@@ -505,3 +485,28 @@ function [refavg, resultavg, error] = patch_compare(resultpatch, referencepatch)
 
 end
 
+% Write the pipeline data results to an output file
+function write_results(results, patchnum, file_name)
+
+    outfileID = fopen(file_name, 'w');
+    
+    % Display results
+    fprintf(outfileID, 'res(red), res(green), res(blue)\n');
+    fprintf(outfileID, 'ref(red), ref(green), ref(blue)\n');
+    fprintf(outfileID, 'err(red), err(green), err(blue)\n');
+    fprintf(outfileID, '\n');
+    for i=1:patchnum
+       fprintf(outfileID, 'Patch %d: \n', i);
+       % Print results
+       fprintf(outfileID, '%4.2f, %4.2f, %4.2f \n', ... 
+           results(i,1,1), results(i,1,2), results(i,1,3));
+       % Print reference
+       fprintf(outfileID, '%4.2f, %4.2f, %4.2f \n', ... 
+           results(i,2,1), results(i,2,2), results(i,2,3));
+       % Print error
+       fprintf(outfileID, '%4.2f, %4.2f, %4.2f \n', ... 
+           results(i,3,1), results(i,3,2), results(i,3,3));
+       fprintf(outfileID, '\n');
+    end
+    
+end
