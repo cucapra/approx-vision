@@ -64,22 +64,21 @@ function ImgPipe_Matlab
     for i=1:patchnum
     
         % Run the model on the patch
-        [demosaiced, transformed, gamutmapped, tonemapped, forward_ref_image] = ...
-            ForwardPipe(model_dir, image_dir, ...
-            raw_image_name, jpg_image_name, ... 
-            patchstarts(i,2), patchstarts(i,1), patchsize, i);
-        
-        forced_input = im2double(tonemapped);
+%         [demosaiced, transformed, gamutmapped, tonemapped, forward_ref_image] = ...
+%             ForwardPipe(model_dir, image_dir, ...
+%             raw_image_name, jpg_image_name, ... 
+%             patchstarts(i,2), patchstarts(i,1), patchsize, i);
+%         
         
         [revtonemapped, revgamutmapped, revtransformed, remosaiced, ref_image_colored] = ...
-            BackwardPipe(forced_input, model_dir, image_dir, ...
+            BackwardPipe(model_dir, image_dir, ...
             jpg_image_name, raw_image_name, ... 
             patchstarts(i,2), patchstarts(i,1), patchsize, i);
         
         [refavg, resultavg, error] = ...
-            getpatchdata(remosaiced, ref_image_colored);
-            %            result,     reference
-            %            tonemapped, forward_ref_image
+            patch_compare(remosaiced, ref_image_colored);
+            %             result,     reference
+            %             tonemapped, forward_ref_image
 
         results(i,1,:) = resultavg;
         results(i,2,:) = refavg;
@@ -262,7 +261,7 @@ function [demosaiced, transformed, gamutmapped, tonemapped, ref_image] = ...
 end 
 
 function [revtonemapped, revgamutmapped, revtransformed, remosaiced, ref_image_colored] = ...
-    BackwardPipe(forced_input, model_dir, image_dir, ...
+    BackwardPipe(model_dir, image_dir, ...
     in_image_name, ref_image_name, ystart, xstart, patchsize, patchid)
 
     % Establish patch
@@ -340,7 +339,7 @@ function [revtonemapped, revgamutmapped, revtransformed, remosaiced, ref_image_c
     image_float      = im2double(in_image);
     
     % Extract patches
-    image_float      = forced_input;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%image_float(ystart:yend,xstart:xend,:); DEBUGGING
+    image_float      = image_float(ystart:yend,xstart:xend,:);
     ref_image        = ref_image  (ystart:yend,xstart:xend);
 
     % Pre-allocate memory
@@ -489,7 +488,7 @@ function out = revtonemap (in, revf)
 end
 
 % Error computation function
-function [refavg, resultavg, error] = getpatchdata(resultpatch, referencepatch)
+function [refavg, resultavg, error] = patch_compare(resultpatch, referencepatch)
 
     refavg    = zeros(3,1);
     resultavg = zeros(3,1);
