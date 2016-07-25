@@ -1,11 +1,8 @@
-//////////////////////////
-// Update this later
-///////////////////////////////
 
 #include "Halide.h"
-#include "ImgPipeConfig.h"
-#include "LoadCamModel.h"
-#include "MatrixOps.h"
+#include "../common/ImgPipeConfig.h"
+#include "../common/LoadCamModel.h"
+#include "../common/MatrixOps.h"
 #include <stdio.h>
 #include <math.h>
 #include "halide_image_io.h"
@@ -77,7 +74,7 @@ int main(int argc, char **argv) {
   ///////////////////////////////////////////////////////////////////////////////////////
   // Establish IO
   char val, label;
-  fstream infile("../data/cifar-10-batches-bin/test_batch.bin");
+  fstream infile("../data-links/cifar-10-batches-bin/test_batch.bin");
   //fstream infile("data_batch_1_converted.bin");
 
   fstream outfile;
