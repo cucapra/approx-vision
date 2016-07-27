@@ -109,25 +109,14 @@ int main(int argc, char **argv) {
   Var x, y, c;
 
   // Load input image 
-  Image<uint8_t> input;
-  input = load_image(in_img_path);
-
-
-  // Initialize patch
-  Image<uint8_t> in_patch;
-
-  // Define simple copying function
-  Func pixel_copy("pixel_copy");
-  pixel_copy(x,y,c) = input(x,y,c);
-
-  in_patch = input;
+  Image<uint8_t> input = load_image(in_img_path);
 
   ///////////////////////////////////////////////////////////////////////////////////////
   // Halide Funcs for camera pipeline
 
   // Cast input to float and scale according to its 8 bit input format
   Func scale("scale");
-    scale(x,y,c) = cast<float>(in_patch(x,y,c))/256;
+    scale(x,y,c) = cast<float>(input(x,y,c))/256;
 
   // FORWARD FUNCS //////////////////////////////////////////////////////////////////////
  
@@ -273,9 +262,9 @@ int main(int argc, char **argv) {
   Image<uint8_t> output;
 
   // backward pipeline
-  output = rev_transform.realize(in_patch.width(), 
-                                 in_patch.height(), 
-                                 in_patch.channels());
+  output = rev_transform.realize(input.width(), 
+                                 input.height(), 
+                                 input.channels());
 
   t2 = current_time();
 
