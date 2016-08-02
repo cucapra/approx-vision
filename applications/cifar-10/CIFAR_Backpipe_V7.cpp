@@ -75,10 +75,10 @@ int main(int argc, char **argv) {
   // Establish IO
   char val, label;
   fstream infile("/work/mark/datasets/cifar-10/cifar-10-batches-bin/test_batch.bin");
-  //fstream infile("data_batch_4_converted.bin");
+  //fstream infile("data_batch_1_converted.bin");
 
   fstream outfile;
-  outfile.open("test_batch_converted_V4.bin",fstream::out);
+  outfile.open("test_batch_converted_V7.bin",fstream::out);
 
   // Declare image handle variables
   Var x, y, c;
@@ -93,7 +93,7 @@ int main(int argc, char **argv) {
   for (int i=0; i<10000; i++) { //i<10000
 
     // print status
-    //printf("data_batch_4_V4 - Image num: %u\n",i);
+    //printf("test - Image num: %u\n",i);
 
     // Read in label
     infile.read(&val,1);
@@ -109,7 +109,7 @@ int main(int argc, char **argv) {
       }
     }
 
-    //save_image(input, "input.png");
+    save_image(input, "input.png");
 
     ///////////////////////////////////////////////////////////////////////////////////////
     // Halide Funcs for camera pipeline
@@ -120,6 +120,11 @@ int main(int argc, char **argv) {
 
     // BACKWARD FUNCS /////////////////////////////////////////////////////////////////////
 
+    // Backward tone mapping
+    Func rev_tonemap("rev_tonemap");
+      Expr rev_tone_idx = cast<uint8_t>(scale(x,y,c) * 256.0f);
+      rev_tonemap(x,y,c) = rev_tone_h(c,rev_tone_idx) ;
+
     // Weighted radial basis function for gamut mapping
     Func rev_rbf_ctrl_pts("rev_rbf_ctrl_pts");
       // Initialization with all zero
@@ -128,9 +133,9 @@ int main(int argc, char **argv) {
       RDom revidx(0,num_ctrl_pts);
       // Loop code
       // Subtract the vectors 
-      Expr revred_sub   = scale(x,y,0) - ctrl_pts_h(0,revidx);
-      Expr revgreen_sub = scale(x,y,1) - ctrl_pts_h(1,revidx);
-      Expr revblue_sub  = scale(x,y,2) - ctrl_pts_h(2,revidx);
+      Expr revred_sub   = rev_tonemap(x,y,0) - ctrl_pts_h(0,revidx);
+      Expr revgreen_sub = rev_tonemap(x,y,1) - ctrl_pts_h(1,revidx);
+      Expr revblue_sub  = rev_tonemap(x,y,2) - ctrl_pts_h(2,revidx);
       // Take the L2 norm to get the distance
       Expr revdist      = sqrt( revred_sub*revred_sub + 
                                 revgreen_sub*revgreen_sub + 
@@ -143,12 +148,12 @@ int main(int argc, char **argv) {
     // Add on the biases for the RBF
     Func rev_rbf_biases("rev_rbf_biases");
       rev_rbf_biases(x,y,c) = max( select( 
-        c == 0, rev_rbf_ctrl_pts(x,y,0) + coefs[0][0] + coefs[1][0]*scale(x,y,0) +
-          coefs[2][0]*scale(x,y,1) + coefs[3][0]*scale(x,y,2),
-        c == 1, rev_rbf_ctrl_pts(x,y,1) + coefs[0][1] + coefs[1][1]*scale(x,y,0) +
-          coefs[2][1]*scale(x,y,1) + coefs[3][1]*scale(x,y,2),
-                rev_rbf_ctrl_pts(x,y,2) + coefs[0][2] + coefs[1][2]*scale(x,y,0) +
-          coefs[2][2]*scale(x,y,1) + coefs[3][2]*scale(x,y,2))
+        c == 0, rev_rbf_ctrl_pts(x,y,0) + coefs[0][0] + coefs[1][0]*rev_tonemap(x,y,0) +
+          coefs[2][0]*rev_tonemap(x,y,1) + coefs[3][0]*rev_tonemap(x,y,2),
+        c == 1, rev_rbf_ctrl_pts(x,y,1) + coefs[0][1] + coefs[1][1]*rev_tonemap(x,y,0) +
+          coefs[2][1]*rev_tonemap(x,y,1) + coefs[3][1]*rev_tonemap(x,y,2),
+                rev_rbf_ctrl_pts(x,y,2) + coefs[0][2] + coefs[1][2]*rev_tonemap(x,y,0) +
+          coefs[2][2]*rev_tonemap(x,y,1) + coefs[3][2]*rev_tonemap(x,y,2))
                               , 0);
 
 
@@ -167,20 +172,28 @@ int main(int argc, char **argv) {
               + rev_rbf_biases(x,y,2)*TsTw_tran[2][2])
                                                           , 0) );
 
-  /*
+  
     Func normalize("normalize");
       normalize(x,y,c) = cast<uint8_t>( min( select(
-                           c == 1, rev_transform(x,y,c),
-                                   rev_transform(x,y,c) * 2), 255) );
-  */
-
+                           c == 0, rev_transform(x,y,0) * 2,
+                           c == 1, rev_transform(x,y,1),
+                                   rev_transform(x,y,2) * 2), 255) );
+  
+    // Approximate forward tone mapping
+    Func approx_tonemap("approx-tonemap");
+      approx_tonemap(x,y,c) = max( min( select(
+              normalize(x,y,c) < 64,  normalize(x,y,c) * 2,
+              normalize(x,y,c) < 128, normalize(x,y,c) + 64,
+                                      normalize(x,y,c)/2 + 128) 
+                                          , 255), 0);
 
     // Common scheduling
-    rev_transform.reorder(c,x,y).bound(c,0,3).unroll(c);
     rev_rbf_ctrl_pts.reorder(c,x,y).bound(c,0,3).unroll(c);
     rev_rbf_biases.reorder(c,x,y).bound(c,0,3).unroll(c);
+    rev_tonemap.reorder(c,x,y).bound(c,0,3).unroll(c);
 
 
+    rev_tonemap.compute_root();
     rev_rbf_ctrl_pts.compute_root();
     rev_rbf_biases.compute_root();
 
@@ -192,47 +205,29 @@ int main(int argc, char **argv) {
     rev_transform.vectorize(x, 8);
     rev_rbf_ctrl_pts.vectorize(x, 8);
     rev_rbf_biases.vectorize(x, 8);
+    rev_tonemap.vectorize(x, 8);
 
     rev_transform.split(y,yo,yi,8).parallel(yo);
     rev_rbf_ctrl_pts.split(y,yo,yi,8).parallel(yo);
     rev_rbf_biases.split(y,yo,yi,8).parallel(yo);
+    rev_tonemap.split(y,yo,yi,8).parallel(yo);
 
     rev_transform.compile_jit();
     rev_rbf_ctrl_pts.compile_jit();
     rev_rbf_biases.compile_jit();
-
-  /*
-    ///////////////////////////////////////////////////////////////////////////////////////
-    // GPU Schedule
-
-    transform.gpu_tile(x, y, 16, 16);
-    rbf_ctrl_pts.gpu_tile(x, y, 16, 16);
-    rbf_biases.gpu_tile(x, y, 16, 16);
-    tonemap.gpu_tile(x, y, 16, 16);
-
-    Target target = get_host_target();
-
-    target.set_feature(Target::CUDA);
-
-    transform.compile_jit(target);
-    rbf_ctrl_pts.compile_jit(target);
-    rbf_biases.compile_jit(target);
-    tonemap.compile_jit(target);
-  */
-
-
+    rev_tonemap.compile_jit();
 
     // Realization
     Image<uint8_t> output;
     // backward pipeline
-    output = rev_transform.realize(input.width(), 
+    output = approx_tonemap.realize(input.width(), 
                                    input.height(), 
                                    input.channels());
 
     ////////////////////////////////////////////////////////////////////////
     // Save the output
 
-    //save_image(output, "output.png");
+    save_image(output, "output.png");
 
     // Read in label
     val = label;

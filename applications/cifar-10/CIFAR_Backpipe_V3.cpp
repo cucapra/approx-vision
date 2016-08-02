@@ -74,11 +74,11 @@ int main(int argc, char **argv) {
   ///////////////////////////////////////////////////////////////////////////////////////
   // Establish IO
   char val, label;
-  fstream infile("../data-links/cifar-10-batches-bin/data_batch_5.bin");
+  fstream infile("/work/mark/datasets/cifar-10/cifar-10-batches-bin/test_batch.bin");
   //fstream infile("data_batch_5_converted.bin");
 
   fstream outfile;
-  outfile.open("data_batch_5_converted_V3.bin",fstream::out);
+  outfile.open("test_batch_converted_V3.bin",fstream::out);
 
   // Declare image handle variables
   Var x, y, c;
@@ -93,7 +93,7 @@ int main(int argc, char **argv) {
   for (int i=0; i<10000; i++) { //i<10000
 
     // print status
-    printf("data_batch_5_converted_V3 - Image num: %u\n",i);
+    //printf("data_batch_5_converted_V3 - Image num: %u\n",i);
 
     // Read in label
     infile.read(&val,1);

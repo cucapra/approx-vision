@@ -75,10 +75,10 @@ int main(int argc, char **argv) {
   // Establish IO
   char val, label;
   fstream infile("/work/mark/datasets/cifar-10/cifar-10-batches-bin/test_batch.bin");
-  //fstream infile("data_batch_4_converted.bin");
+  //fstream infile("data_batch_1_converted.bin");
 
   fstream outfile;
-  outfile.open("test_batch_converted_V4.bin",fstream::out);
+  outfile.open("test_batch_converted_V6.bin",fstream::out);
 
   // Declare image handle variables
   Var x, y, c;
@@ -93,7 +93,7 @@ int main(int argc, char **argv) {
   for (int i=0; i<10000; i++) { //i<10000
 
     // print status
-    //printf("data_batch_4_V4 - Image num: %u\n",i);
+    //printf("test - Image num: %u\n",i);
 
     // Read in label
     infile.read(&val,1);
@@ -167,19 +167,19 @@ int main(int argc, char **argv) {
               + rev_rbf_biases(x,y,2)*TsTw_tran[2][2])
                                                           , 0) );
 
-  /*
+  
     Func normalize("normalize");
       normalize(x,y,c) = cast<uint8_t>( min( select(
-                           c == 1, rev_transform(x,y,c),
-                                   rev_transform(x,y,c) * 2), 255) );
-  */
+                           c == 0, rev_transform(x,y,0) * 2,
+                           c == 1, rev_transform(x,y,1),
+                                   rev_transform(x,y,2) * 2), 255) );
+  
 
 
     // Common scheduling
     rev_transform.reorder(c,x,y).bound(c,0,3).unroll(c);
     rev_rbf_ctrl_pts.reorder(c,x,y).bound(c,0,3).unroll(c);
     rev_rbf_biases.reorder(c,x,y).bound(c,0,3).unroll(c);
-
 
     rev_rbf_ctrl_pts.compute_root();
     rev_rbf_biases.compute_root();
@@ -201,31 +201,11 @@ int main(int argc, char **argv) {
     rev_rbf_ctrl_pts.compile_jit();
     rev_rbf_biases.compile_jit();
 
-  /*
-    ///////////////////////////////////////////////////////////////////////////////////////
-    // GPU Schedule
-
-    transform.gpu_tile(x, y, 16, 16);
-    rbf_ctrl_pts.gpu_tile(x, y, 16, 16);
-    rbf_biases.gpu_tile(x, y, 16, 16);
-    tonemap.gpu_tile(x, y, 16, 16);
-
-    Target target = get_host_target();
-
-    target.set_feature(Target::CUDA);
-
-    transform.compile_jit(target);
-    rbf_ctrl_pts.compile_jit(target);
-    rbf_biases.compile_jit(target);
-    tonemap.compile_jit(target);
-  */
-
-
 
     // Realization
     Image<uint8_t> output;
     // backward pipeline
-    output = rev_transform.realize(input.width(), 
+    output = normalize.realize(input.width(), 
                                    input.height(), 
                                    input.channels());
 

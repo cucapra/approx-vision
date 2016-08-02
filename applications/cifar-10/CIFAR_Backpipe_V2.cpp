@@ -74,11 +74,11 @@ int main(int argc, char **argv) {
   ///////////////////////////////////////////////////////////////////////////////////////
   // Establish IO
   char val, label;
-  fstream infile("../data-links/cifar-10-batches-bin/data_batch_5.bin");
+  fstream infile("/work/mark/datasets/cifar-10/cifar-10-batches-bin/test_batch.bin");
   //fstream infile("data_batch_5_converted.bin");
 
   fstream outfile;
-  outfile.open("data_batch_5_converted_V2.bin",fstream::out);
+  outfile.open("test_batch_converted_V2.bin",fstream::out);
 
   // Declare image handle variables
   Var x, y, c;
@@ -93,7 +93,7 @@ int main(int argc, char **argv) {
   for (int i=0; i<10000; i++) { //i<10000
 
     // print status
-    printf("data_batch_5_V2 - Image num: %u\n",i);
+    printf("test_batch_V2 - Image num: %u\n",i);
 
     // Read in label
     infile.read(&val,1);
@@ -147,14 +147,14 @@ int main(int argc, char **argv) {
 
     // Add on the biases for the RBF
     Func rev_rbf_biases("rev_rbf_biases");
-      rev_rbf_biases(x,y,c) = cast<uint8_t>( max( select( 
+      rev_rbf_biases(x,y,c) = cast<uint8_t>( min( max( 256*select( 
         c == 0, rev_rbf_ctrl_pts(x,y,0) + coefs[0][0] + coefs[1][0]*rev_tonemap(x,y,0) +
           coefs[2][0]*rev_tonemap(x,y,1) + coefs[3][0]*rev_tonemap(x,y,2),
         c == 1, rev_rbf_ctrl_pts(x,y,1) + coefs[0][1] + coefs[1][1]*rev_tonemap(x,y,0) +
           coefs[2][1]*rev_tonemap(x,y,1) + coefs[3][1]*rev_tonemap(x,y,2),
                 rev_rbf_ctrl_pts(x,y,2) + coefs[0][2] + coefs[1][2]*rev_tonemap(x,y,0) +
           coefs[2][2]*rev_tonemap(x,y,1) + coefs[3][2]*rev_tonemap(x,y,2))
-                              , 0) );
+                              , 0), 255 ));
 
 
   /*
@@ -191,25 +191,6 @@ int main(int argc, char **argv) {
     rev_rbf_ctrl_pts.compile_jit();
     rev_rbf_biases.compile_jit();
     rev_tonemap.compile_jit();
-
-  /*
-    ///////////////////////////////////////////////////////////////////////////////////////
-    // GPU Schedule
-
-    transform.gpu_tile(x, y, 16, 16);
-    rbf_ctrl_pts.gpu_tile(x, y, 16, 16);
-    rbf_biases.gpu_tile(x, y, 16, 16);
-    tonemap.gpu_tile(x, y, 16, 16);
-
-    Target target = get_host_target();
-
-    target.set_feature(Target::CUDA);
-
-    transform.compile_jit(target);
-    rbf_ctrl_pts.compile_jit(target);
-    rbf_biases.compile_jit(target);
-    tonemap.compile_jit(target);
-  */
 
 
 
