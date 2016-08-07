@@ -30,7 +30,7 @@ char jpg_image[] =
 
 // Path to the camera model to be used
 char cam_model_path[] =
-"../../../ReversiblePipeline/camera_models/NikonD7000/";
+"../../cam_models/NikonD7000/";
 
 // White balance index (select white balance from transform file)
 // The first white balance in the file has a wb_index of 1
