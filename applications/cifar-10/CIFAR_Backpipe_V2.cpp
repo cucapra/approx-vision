@@ -7,14 +7,28 @@
 #include <math.h>
 #include "halide_image_io.h"
 
+// This pipeline only performs reverse tone mapping and gamut mapping
+// The result is as if only color transformation was performed
 
 // Reversible pipeline function
 int main(int argc, char **argv) {
 
+  using namespace std;  
+
+  // Inform user of usage method
+  if ( argc != 3 ) 
+  {
+      printf("usage: \n./convert in/data/name.bin out/data/name.bin \n");
+      return -1; 
+  }
+
+  // Input data directory
+  const char * in_data_path   = argv[1];
+  // Output data directory
+  const char * out_data_path  = argv[2];
+
   ///////////////////////////////////////////////////////////////////////////////////////
   // Import and format model data
-
-  using namespace std;  
 
   // Declare model parameters
   vector<vector<float>> Ts, Tw, TsTw;
@@ -74,11 +88,15 @@ int main(int argc, char **argv) {
   ///////////////////////////////////////////////////////////////////////////////////////
   // Establish IO
   char val, label;
-  fstream infile("/work/mark/datasets/cifar-10/cifar-10-batches-bin/test_batch.bin");
-  //fstream infile("data_batch_5_converted.bin");
+  fstream infile(in_data_path);
+  //fstream infile("/work/mark/datasets/cifar-10/cifar-10-batches-bin/test_batch.bin");
+  if(!infile) {
+    printf("Input file not found: %s\n", in_data_path);
+    return 1;
+  }  
 
   fstream outfile;
-  outfile.open("test_batch_converted_V2.bin",fstream::out);
+  outfile.open(out_data_path,fstream::out);
 
   // Declare image handle variables
   Var x, y, c;
