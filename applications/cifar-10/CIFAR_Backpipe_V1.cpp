@@ -107,7 +107,7 @@ int main(int argc, char **argv) {
   // Process Images
  
 
-  for (int i=0; i<1; i++) { //i<10000
+  for (int i=0; i<10000; i++) { //i<10000
 
     // print status
     //printf("test - Image num: %u\n",i);
