@@ -12,13 +12,17 @@ using namespace cv;
 int main(int argc, char** argv )
 {
 
-  Mat in_img, out_img;
+  Mat in_img;
 
-  in_img = imread("../benchmark_images/beer_hall.raw_3C.png",CV_16UC3);
+//  in_img = imread("../benchmark_images/beer_hall.raw_3C.png",CV_16UC3);
+  in_img = imread("../benchmark_images/beer_hall.raw_3C.png");
 
-  in_img.convertTo(in_img,CV_8U);
+  Mat in8bit(in_img.rows,in_img.cols,CV_8UC3);
+  Mat out_img(in_img.rows,in_img.cols,CV_8UC3);
 
-  fastNlMeansDenoising(in_img,out_img);
+  in_img.convertTo(in8bit,CV_8UC3);
+
+  fastNlMeansDenoisingColored(in8bit,out_img);
 
   imwrite("out.png",out_img);
 

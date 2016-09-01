@@ -15,7 +15,7 @@ int main(int argc, char** argv )
 
   Mat in_img;
 
-  in_img = imread("../benchmark_images/beer_hall.raw_3C.png",CV_16UC3);
+  in_img = imread("../benchmark_images/beer_hall.raw_3C.png");
 
   imwrite("out.png",in_img);
 
