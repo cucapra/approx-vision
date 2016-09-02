@@ -22,7 +22,7 @@ int main(int argc, char** argv )
   cvtColor(in_img, bgr_3C, CV_BayerGB2RGB);
 
   // Write the demosiaced 3 channel representation to file
-  imwrite("out.png", bgr_3C);
+  //imwrite("out.png", bgr_3C);
 
 
   return 0;

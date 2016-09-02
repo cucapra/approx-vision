@@ -24,7 +24,7 @@ int main(int argc, char** argv )
 
   fastNlMeansDenoisingColored(in8bit,out_img);
 
-  imwrite("out.png",out_img);
+  //imwrite("out.png",out_img);
 
   return 0;
 

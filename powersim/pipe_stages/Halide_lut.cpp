@@ -1,21 +1,4 @@
-/////////////////////////////////////////////////////////////////////////////////////////
-// Image Processing Pipeline
-//
-// This is a Halide implementation of a pre-learned image 
-// processing model. A description of the model can be found in
-// "A New In-Camera Imaging Model for Color Computer Vision 
-// and its Application" by Seon Joo Kim, Hai Ting Lin, 
-// Michael Brown, et al. Code for learning a new model can 
-// be found at the original project page. This particular 
-// implementation was written by Mark Buckler.
-//
-// Original Project Page:
-// http://www.comp.nus.edu.sg/~brown/radiometric_calibration/
-//
-// Model Format Readme:
-// http://www.comp.nus.edu.sg/~brown/radiometric_calibration/datasets/Model_param/readme.pdf
-//
-/////////////////////////////////////////////////////////////////////////////////////////
+ 
 
 #include "Halide.h"
 #include "ImgPipeConfig.h"
@@ -54,7 +37,7 @@ int main(int argc, char **argv) {
   coefs     = get_coefs    (cam_model_path, num_ctrl_pts, direction);
   rev_tone  = get_rev_tone (cam_model_path);
 
-  // Take the transpose of the color map and white balance transform for later use
+  // Take the transpose of the color map and white balance scale for later use
   vector<vector<float>> TsTw_tran = transpose_mat (TsTw);
 
   using namespace Halide;
@@ -100,11 +83,18 @@ int main(int argc, char **argv) {
 
   // Cast input to float and scale according to its 8 bit input format
   Func scale("scale");
-    scale(x,y,c) = cast<float>(input(x,y,c))/256;
+    scale(x,y,c) = (input(x,y,c));
+
+  // Fake LUT (used for both gamut_lut and tone_lut)
+  // The actual functionality is backward tone mapping
+  Func lut_func("lut_func");
+    Expr idx = cast<uint8_t>(scale(x,y,c));
+    lut_func(x,y,c) = rev_tone_h(c,idx) ;
+
+  //lut_func.trace_stores();
 
   Func descale("descale");
-    descale(x,y,c) = cast<uint8_t>(scale(x,y,c)*256);
-
+    descale(x,y,c) = cast<uint8_t>(lut_func(x,y,c)*256);
 
   ////////////////////////////////////////////////////////////////////////
   // Realization (actual computation)

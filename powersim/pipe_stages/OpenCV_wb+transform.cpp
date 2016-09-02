@@ -13,11 +13,13 @@ using namespace cv;
 int main(int argc, char** argv )
 {
 
-  Mat in_img;
+  Mat in_img, out_img;
 
   in_img = imread("../benchmark_images/beer_hall.raw_3C.png");
 
-  //imwrite("out.png",in_img);
+  cvtColor(in_img,out_img,CV_RGB2GRAY);
+
+  //imwrite("out.png",out_img);
 
   return 0;
 

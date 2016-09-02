@@ -102,8 +102,35 @@ int main(int argc, char **argv) {
   Func scale("scale");
     scale(x,y,c) = cast<float>(input(x,y,c))/256;
 
+
+  // Color map and white balance transform
+  Func transform("transform");
+    transform(x,y,c) = select(
+      // Perform matrix multiplication, set min of 0
+      c == 0, scale(x,y,0)*TsTw_tran[0][0]
+            + scale(x,y,1)*TsTw_tran[1][0]
+            + scale(x,y,2)*TsTw_tran[2][0],
+      c == 1, scale(x,y,0)*TsTw_tran[0][1]
+            + scale(x,y,1)*TsTw_tran[1][1]
+            + scale(x,y,2)*TsTw_tran[2][1],
+              scale(x,y,0)*TsTw_tran[0][2]
+            + scale(x,y,1)*TsTw_tran[1][2]
+            + scale(x,y,2)*TsTw_tran[2][2]);
+
+/*
+  // Color map and white balance transform
+  Func transform("transform");
+    transform(x,y,c) = select(
+      // Perform matrix multiplication, set min of 0
+      c == 0, scale(x,y,0)*TsTw_tran[0][0],
+      c == 1, scale(x,y,0)*TsTw_tran[0][1],
+              scale(x,y,0)*TsTw_tran[0][2]);
+*/
+//  transform.trace_stores();
+
   Func descale("descale");
-    descale(x,y,c) = cast<uint8_t>(scale(x,y,c)*256);
+    descale(x,y,c) = cast<uint8_t>(transform(x,y,c)*256);
+//    descale(x,y,c) = cast<uint8_t>(transform(x,y,c));
 
 
   ////////////////////////////////////////////////////////////////////////

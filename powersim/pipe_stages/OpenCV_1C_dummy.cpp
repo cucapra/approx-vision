@@ -17,7 +17,7 @@ int main(int argc, char** argv )
 
   in_img = imread("../benchmark_images/beer_hall.raw_1C.png",CV_16UC1);
 
-  imwrite("out.png",in_img);
+  //imwrite("out.png",in_img);
 
   return 0;
 
