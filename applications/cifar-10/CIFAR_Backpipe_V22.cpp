@@ -125,7 +125,7 @@ int main(int argc, char **argv) {
       }
     }
 
-    save_image(input, "input.png");
+    //save_image(input, "input.png");
 
     ///////////////////////////////////////////////////////////////////////////////////////
     // Halide Funcs for camera pipeline
@@ -156,7 +156,7 @@ int main(int argc, char **argv) {
     ////////////////////////////////////////////////////////////////////////
     // Save the output
 
-    save_image(output, "output.png");
+    //save_image(output, "output.png");
 
     // Read in label
     val = label;
