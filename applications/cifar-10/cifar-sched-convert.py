@@ -13,10 +13,10 @@ if (len(sys.argv) < 2):
 version       = sys.argv[1]
 
 # Directory with virgin cifar data files
-data_in_dir   = '/work/mark/datasets/cifar-10/cifar-10-batches-bin/'
+data_in_dir   = '../data/cifar10/'
 
 # Directory to put the converted files
-data_out_dir  = '/work/mark/datasets/cifar-10/converted/'
+data_out_dir  = '../data/cifar10/converted-V'+str(version)+'/'
 
 # Data batch names
 data_names    = ['test_batch',
@@ -25,6 +25,9 @@ data_names    = ['test_batch',
   'data_batch_3',
   'data_batch_4',
   'data_batch_5']
+
+# Create the directory for the converted files
+subprocess.call(["mkdir",data_out_dir])
 
 # Compile the converter
 subprocess.call(["make",('V'+str(version))])
