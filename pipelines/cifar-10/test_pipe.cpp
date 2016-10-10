@@ -1,13 +1,12 @@
 
 #include "Halide.h"
-#include "halide_stages.cpp"
+#include "halide_stages.h"
 #include "../common/ImgPipeConfig.h"
 #include "../common/LoadCamModel.h"
 #include "../common/MatrixOps.h"
 #include <stdio.h>
 #include <math.h>
 #include "halide_image_io.h"
-#include "halide_stages.h"
 
 // This is the full reverse pipeline, converting sRGB to raw
 
