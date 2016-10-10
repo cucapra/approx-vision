@@ -4,6 +4,7 @@
 // This file adds noise based on parameters for
 // the Nikon D80 sensor
 
+#include <stdio.h>
 #include <opencv2/opencv.hpp>
 
 using namespace std;
@@ -59,22 +60,22 @@ int main(int argc, char** argv )
   //                  gaussian_rand( std_dev = sqrt(a*unnoised_pixel + b) )
   // a and b values vary between channels
   double red_a, red_b, green_a, green_b, blue_a, blue_b;
-
+/*
   red_a   =  0.1460;
   red_b   =  7.6876;
   green_a =  0.1352;
   green_b =  5.0834;
   blue_a  =  0.1709;
   blue_b  = 12.3381;
+*/
 
-/*
   red_a   =  20.1460;
   red_b   =  25.6876;
   green_a =  red_a;
   green_b =  red_b;
   blue_a  =  red_a;
   blue_b  =  red_b;
-*/
+
 
   double noise_;
   
@@ -146,6 +147,7 @@ int main(int argc, char** argv )
   printf("Gaussian PSNR: %f\n",psnr);
 
 
+  imwrite("out_dslr.png",out_8bit);
 
 
   /////////////////////////////////////////////////////////////////
@@ -222,12 +224,7 @@ int main(int argc, char** argv )
 
 
 
-
-
-
-
-
-  imwrite("out.png",out_8bit);
+  imwrite("out_nokia.png",out_8bit);
 
   return 0;
 }
