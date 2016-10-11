@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <math.h>
 #include "halide_image_io.h"
+#include <opencv2/opencv.hpp>
 
 // This is the full reverse pipeline, converting sRGB to raw
 
@@ -56,6 +57,7 @@ int main(int argc, char **argv) {
 
   using namespace Halide;
   using namespace Halide::Tools;
+  using namespace cv;
 
   // Convert control points to a Halide image
   int width  = ctrl_pts[0].size();
@@ -127,6 +129,10 @@ int main(int argc, char **argv) {
       }
     }
 
+    Mat cv_image(32,32,CV_8UC3,in_data,32*3);
+    imwrite("cv_image.png",cv_image);
+
+
     // Construct data buffer
     buffer_t input_buf  = {0};
     // Connect to image data
@@ -138,9 +144,10 @@ int main(int argc, char **argv) {
     input_buf.extent[1] = 32; //y: height
     input_buf.extent[2] = 3;  //c: num colors
     // Set dimension strides for interleaved
-    input_buf.stride[0] = 3;    //x: num colors
-    input_buf.stride[1] = 3*32; //y: 3 * width
-    input_buf.stride[2] = 1;    //c: 1
+    input_buf.stride[0] = 1;    
+    input_buf.stride[1] = 32; 
+    input_buf.stride[2] = 32*32;  
+
 
 
     //Image<uint8_t> input(32,32,3);
