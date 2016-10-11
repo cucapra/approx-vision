@@ -11,6 +11,7 @@ Func make_scale( Image<uint8_t> *in_img ) {
   // Cast input to float and scale from 8 bit 0-255 range to 0-1 range
   Func scale("scale");
     scale(x,y,c) = cast<float>( (*in_img)(x,y,c) ) / 256;
+  return scale;
 }
 
 Func make_descale( Func *in_func ) {
@@ -18,6 +19,7 @@ Func make_descale( Func *in_func ) {
   // de-scale from 0-1 range to 0-255 range, and cast to 8 bit 
   Func descale("descale");
     descale(x,y,c) = cast<uint8_t>( (*in_func)(x,y,c) * 256 );
+  return descale;
 }
 
 /*

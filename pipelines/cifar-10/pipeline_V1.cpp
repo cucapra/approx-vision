@@ -102,7 +102,6 @@ int main(int argc, char **argv) {
   Var x, y, c;
 
   // Define input image 
-  Image<uint8_t> input(32,32,3);
 
   ///////////////////////////////////////////////////////////////////////////////////////
   // Process Images
@@ -110,8 +109,8 @@ int main(int argc, char **argv) {
 
   for (int i=0; i<1; i++) { //i<10000
 
-    // print status
-    //printf("test - Image num: %u\n",i);
+    // Define input data
+    unsigned char* in_data = new unsigned char[3 * 32 * 32];
 
     // Read in label
     infile.read(&val,1);
@@ -122,10 +121,30 @@ int main(int argc, char **argv) {
       for (int y=0; y<32; y++) {
         for (int x=0; x<32; x++) {
           infile.read(&val,1);
-          input(x,y,c) = (unsigned char)val;
+          in_data[(c*32*32) + (y*32) + x] = (unsigned char)val;
+          //input(x,y,c) = (unsigned char)val;
         }
       }
     }
+
+    // Construct data buffer
+    buffer_t input_buf  = {0};
+    // Connect to image data
+    input_buf.host      = in_data;
+    // 8 bit image
+    input_buf.elem_size = 1;
+    // Set dimension sizes
+    input_buf.extent[0] = 32; //x: width
+    input_buf.extent[1] = 32; //y: height
+    input_buf.extent[2] = 3;  //c: num colors
+    // Set dimension strides for interleaved
+    input_buf.stride[0] = 3;    //x: num colors
+    input_buf.stride[1] = 3*32; //y: 3 * width
+    input_buf.stride[2] = 1;    //c: 1
+
+
+    //Image<uint8_t> input(32,32,3);
+    Image<uint8_t> input(input_buf);
 
     save_image(input, "input.png");
 
@@ -151,13 +170,12 @@ int main(int argc, char **argv) {
     // Read in label
     val = label;
     outfile.write(&val,1);
-    //infile.read(&val,1);
-    //label = val;
     
     for (int c=0; c<3; c++) { 
       for (int y=0; y<32; y++) {
         for (int x=0; x<32; x++) {
-          val = output(x,y,c);
+          //val = output(x,y,c);
+          val = in_data[(c*y*x) + (y*x) + x];
           outfile.write(&val,1);
         }
       }
