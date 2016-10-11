@@ -1,6 +1,6 @@
 
 #include "Halide.h"
-#include "halide_stages.h"
+#include "../common/halide_stages.h"
 #include "../common/ImgPipeConfig.h"
 #include "../common/LoadCamModel.h"
 #include "../common/MatrixOps.h"

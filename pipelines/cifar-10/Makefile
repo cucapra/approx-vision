@@ -2,10 +2,7 @@
 # Makefile for pipeline compilation
 
 test:
-	g++ test_pipe.cpp halide_stages.cpp ../common/LoadCamModel.cpp ../common/MatrixOps.cpp -g -I ~/packages/Halide/include/ -I ~/packages/Halide/tools -L ~/packages/Halide/bin -lHalide `libpng-config --cflags --ldflags` `pkg-config opencv --cflags --libs` -lpthread -ldl -lm -o test_pipe -std=c++11
-#	g++ test_pipe.cpp halide_stages.cpp ../common/LoadCamModel.cpp ../common/MatrixOps.cpp -g -I ~/packages/Halide/include/ -I ~/packages/Halide/tools -L ~/packages/Halide/bin -lHalide `libpng-config --cflags --ldflags` -lpthread -ldl -lm -o convert-V10 -std=c++11
-
-#	g++ -o convert-V29 CIFAR_Backpipe_V29.cpp `pkg-config opencv --cflags --libs` -lm
+	g++ test_pipe.cpp ../common/halide_stages.cpp ../common/LoadCamModel.cpp ../common/MatrixOps.cpp -g -I ~/packages/Halide/include/ -I ~/packages/Halide/tools -L ~/packages/Halide/bin -lHalide `libpng-config --cflags --ldflags` `pkg-config opencv --cflags --libs` -lpthread -ldl -lm -o test_pipe -std=c++11
 
 V10:
 	g++ CIFAR_Backpipe_V10.cpp ../common/LoadCamModel.cpp ../common/MatrixOps.cpp -g -I ~/packages/Halide/include/ -I ~/packages/Halide/tools -L ~/packages/Halide/bin -lHalide `libpng-config --cflags --ldflags` -lpthread -ldl -lm -o convert-V10 -std=c++11
