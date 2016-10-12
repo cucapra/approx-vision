@@ -3,6 +3,24 @@
 
 using namespace Halide;
 
+buffer_t make_char_buffer( unsigned char* data ) {
+  // Construct data buffer
+  buffer_t buf  = {0};
+  // Connect to image data
+  buf.host      = data;
+  // 8 bit image
+  buf.elem_size = 1;
+  // Set dimension sizes
+  buf.extent[0] = 32; //x: width
+  buf.extent[1] = 32; //y: height
+  buf.extent[2] = 3;  //c: num colors
+  // Set dimension strides for interleaved
+  buf.stride[0] = 3;
+  buf.stride[1] = 3*32;
+  buf.stride[2] = 1;
+  return buf;
+}
+
 ///////////////////////////////////////////////////////////////////////////////////////
 // Halide Funcs for camera pipeline
 

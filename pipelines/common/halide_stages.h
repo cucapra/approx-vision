@@ -4,6 +4,9 @@
 
 using namespace Halide;
 
+
+buffer_t make_char_buffer( unsigned char* data );
+
 ///////////////////////////////////////////////////////////////////////////////////////
 // Halide Funcs for camera pipeline
 
