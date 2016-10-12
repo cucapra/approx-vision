@@ -123,16 +123,17 @@ int main(int argc, char **argv) {
       for (int y=0; y<32; y++) {
         for (int x=0; x<32; x++) {
           infile.read(&val,1);
-          in_data[(c*32*32) + (y*32) + x] = (unsigned char)val;
+          //in_data[(c*32*32) + (y*32) + x] = (unsigned char)val;
+          in_data[(c) + (y*3*32) + (x*3)] = (uint8_t)val;
           //input(x,y,c) = (unsigned char)val;
         }
       }
     }
 
-    Mat cv_image(32,32,CV_8UC3,in_data,32*3);
+    Mat cv_image(32,32,CV_8UC3,in_data);
     imwrite("cv_image.png",cv_image);
 
-
+/*
     // Construct data buffer
     buffer_t input_buf  = {0};
     // Connect to image data
@@ -144,16 +145,25 @@ int main(int argc, char **argv) {
     input_buf.extent[1] = 32; //y: height
     input_buf.extent[2] = 3;  //c: num colors
     // Set dimension strides for interleaved
-    input_buf.stride[0] = 1;    
-    input_buf.stride[1] = 32; 
-    input_buf.stride[2] = 32*32;  
+    input_buf.stride[0] = 3;    
+    input_buf.stride[1] = 3*32; 
+    input_buf.stride[2] = 1;  
+*/
 
 
+    buffer_t buffer;
+    memset(&buffer, 0, sizeof(buffer));
+    buffer.host = cv_image.data;
+    buffer.elem_size = cv_image.elemSize1();
+    buffer.extent[0] = cv_image.cols;
+    buffer.extent[1] = cv_image.rows;
+    buffer.extent[2] = cv_image.channels();
+    buffer.stride[0] = cv_image.step1(1);
+    buffer.stride[1] = cv_image.step1(0);
+    buffer.stride[2] = 1;
 
-    //Image<uint8_t> input(32,32,3);
-    Image<uint8_t> input(input_buf);
+    Image<uint8_t> input(buffer);
 
-    save_image(input, "input.png");
 
     ///////////////////////////////////////////////////////////////////////////////////////
     // Halide Funcs for camera pipeline
@@ -169,9 +179,10 @@ int main(int argc, char **argv) {
                              input.height(), 
                              input.channels());
 
+
     ////////////////////////////////////////////////////////////////////////
     // Save the output
-
+    save_image(input, "input.png");
     save_image(output, "output.png");
 
     // Read in label
@@ -181,8 +192,7 @@ int main(int argc, char **argv) {
     for (int c=0; c<3; c++) { 
       for (int y=0; y<32; y++) {
         for (int x=0; x<32; x++) {
-          //val = output(x,y,c);
-          val = in_data[(c*y*x) + (y*x) + x];
+          val = in_data[(c) + (y*3*32) + (x*3)];
           outfile.write(&val,1);
         }
       }
