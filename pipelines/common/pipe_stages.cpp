@@ -65,8 +65,7 @@ Func make_scale( Image<uint8_t> *in_img ) {
   return scale;
 }
 
-Func make_descale( Image<float> *in_func ) {
-//Func make_descale( Func *in_func ) {
+Func make_descale( Func *in_func ) {
   Var x, y, c;
   // de-scale from 0-1 range to 0-255 range, and cast to 8 bit 
   Func descale("descale");
@@ -74,61 +73,94 @@ Func make_descale( Image<float> *in_func ) {
   return descale;
 }
 
-/*
-// BACKWARD FUNCS /////////////////////////////////////////////////////////////////////
+Func make_rev_tonemap( Func *in_func, 
+                       Image<float> *rev_tone_h ) {
+  Var x, y, c;
+  // Backward tone mapping
+  Func rev_tonemap("rev_tonemap");
+    Expr rev_tone_idx = cast<uint8_t>((*in_func)(x,y,c) * 256.0f);
+    rev_tonemap(x,y,c) = (*rev_tone_h)(c,rev_tone_idx) ;
+  return rev_tonemap;
+}
 
-    // Backward tone mapping
-    Func rev_tonemap("rev_tonemap");
-      Expr rev_tone_idx = cast<uint8_t>(scale(x,y,c) * 256.0f);
-      rev_tonemap(x,y,c) = rev_tone_h(c,rev_tone_idx) ;
+Func make_tone_map( Func *in_func,
+                    Image<float> *rev_tone_h ) {
+  Var x, y, c;
+  // Forward tone mapping
+  Func tonemap("tonemap");
+    RDom idx2(0,256);
+    // Theres a lot in this one line! Functionality wise it finds the entry in 
+    // the reverse tone mapping function which is closest to the value found by
+    // gamut mapping. The output is then cast to uint8 for output. Effectively 
+    // it reverses the reverse tone mapping function.
+    tonemap(x,y,c) = cast<uint8_t>(argmin( abs( (*rev_tone_h)(c,idx2) - (*in_func)(x,y,c) ) )[0]);
+  return tonemap;
+}
 
-    // Weighted radial basis function for gamut mapping
-    Func rev_rbf_ctrl_pts("rev_rbf_ctrl_pts");
-      // Initialization with all zero
-      rev_rbf_ctrl_pts(x,y,c) = cast<float>(0);
-      // Index to iterate with
-      RDom revidx(0,num_ctrl_pts);
-      // Loop code
-      // Subtract the vectors 
-      Expr revred_sub   = rev_tonemap(x,y,0) - ctrl_pts_h(0,revidx);
-      Expr revgreen_sub = rev_tonemap(x,y,1) - ctrl_pts_h(1,revidx);
-      Expr revblue_sub  = rev_tonemap(x,y,2) - ctrl_pts_h(2,revidx);
-      // Take the L2 norm to get the distance
-      Expr revdist      = sqrt( revred_sub*revred_sub + 
-                                revgreen_sub*revgreen_sub + 
-                                revblue_sub*revblue_sub );
-      // Update persistant loop variables
-      rev_rbf_ctrl_pts(x,y,c) = select( c == 0, rev_rbf_ctrl_pts(x,y,c) +
-                                          (weights_h(0,revidx) * revdist),
-                                        c == 1, rev_rbf_ctrl_pts(x,y,c) + 
-                                          (weights_h(1,revidx) * revdist),
-                                                rev_rbf_ctrl_pts(x,y,c) + 
-                                          (weights_h(2,revidx) * revdist));
+Func make_rbf_ctrl_pts( Func *in_func, 
+                        int num_ctrl_pts,
+                        Image<float> *ctrl_pts_h, 
+                        Image<float> *weights_h ) {
+  Var x, y, c;
+  // Weighted radial basis function for gamut mapping
+  Func rbf_ctrl_pts("rbf_ctrl_pts");
+    // Initialization with all zero
+    rbf_ctrl_pts(x,y,c) = cast<float>(0);
+    // Index to iterate with
+    RDom idx(0,num_ctrl_pts);
+    // Loop code
+    // Subtract the vectors 
+    Expr red_sub   = (*in_func)(x,y,0) - (*ctrl_pts_h)(0,idx);
+    Expr green_sub = (*in_func)(x,y,1) - (*ctrl_pts_h)(1,idx);
+    Expr blue_sub  = (*in_func)(x,y,2) - (*ctrl_pts_h)(2,idx);
+    // Take the L2 norm to get the distance
+    Expr dist      = sqrt( red_sub*red_sub + 
+                              green_sub*green_sub + 
+                              blue_sub*blue_sub );
+    // Update persistant loop variables
+    rbf_ctrl_pts(x,y,c) = select( c == 0, rbf_ctrl_pts(x,y,c) +
+                                        ( (*weights_h)(0,idx) * dist),
+                                      c == 1, rbf_ctrl_pts(x,y,c) + 
+                                        ( (*weights_h)(1,idx) * dist),
+                                              rbf_ctrl_pts(x,y,c) + 
+                                        ( (*weights_h)(2,idx) * dist));
+  return rbf_ctrl_pts;
+}
 
-    // Add on the biases for the RBF
-    Func rev_rbf_biases("rev_rbf_biases");
-      rev_rbf_biases(x,y,c) = max( select( 
-        c == 0, rev_rbf_ctrl_pts(x,y,0) + coefs[0][0] + coefs[1][0]*rev_tonemap(x,y,0) +
-          coefs[2][0]*rev_tonemap(x,y,1) + coefs[3][0]*rev_tonemap(x,y,2),
-        c == 1, rev_rbf_ctrl_pts(x,y,1) + coefs[0][1] + coefs[1][1]*rev_tonemap(x,y,0) +
-          coefs[2][1]*rev_tonemap(x,y,1) + coefs[3][1]*rev_tonemap(x,y,2),
-                rev_rbf_ctrl_pts(x,y,2) + coefs[0][2] + coefs[1][2]*rev_tonemap(x,y,0) +
-          coefs[2][2]*rev_tonemap(x,y,1) + coefs[3][2]*rev_tonemap(x,y,2))
-                              , 0);
+Func make_rbf_biases( Func *in_func, 
+                      Func *rbf_ctrl_pts, 
+                      vector<vector<float>> *coefs ) {
+  Var x, y, c;
+  // Add on the biases for the RBF
+  Func rbf_biases("rbf_biases");
+    rbf_biases(x,y,c) = max( select( 
+      c == 0, (*rbf_ctrl_pts)(x,y,0)     + (*coefs)[0][0] + (*coefs)[1][0]*(*in_func)(x,y,0) +
+        (*coefs)[2][0]*(*in_func)(x,y,1) + (*coefs)[3][0]*(*in_func)(x,y,2),
+      c == 1, (*rbf_ctrl_pts)(x,y,1)     + (*coefs)[0][1] + (*coefs)[1][1]*(*in_func)(x,y,0) +
+        (*coefs)[2][1]*(*in_func)(x,y,1) + (*coefs)[3][1]*(*in_func)(x,y,2),
+              (*rbf_ctrl_pts)(x,y,2)     + (*coefs)[0][2] + (*coefs)[1][2]*(*in_func)(x,y,0) +
+        (*coefs)[2][2]*(*in_func)(x,y,1) + (*coefs)[3][2]*(*in_func)(x,y,2))
+                            , 0);
+  return rbf_biases;
+}
 
+Func make_transform( Func *in_func, 
+                     vector<vector<float>> *TsTw_tran ) {
+  Var x, y, c;
+  // Reverse color map and white balance transform
+  Func transform("transform");
+    transform(x,y,c) = max( select(
+      // Perform matrix multiplication, set min of 0
+      c == 0, (*in_func)(x,y,0)*(*TsTw_tran)[0][0]
+            + (*in_func)(x,y,1)*(*TsTw_tran)[1][0]
+            + (*in_func)(x,y,2)*(*TsTw_tran)[2][0],
+      c == 1, (*in_func)(x,y,0)*(*TsTw_tran)[0][1]
+            + (*in_func)(x,y,1)*(*TsTw_tran)[1][1]
+            + (*in_func)(x,y,2)*(*TsTw_tran)[2][1],
+              (*in_func)(x,y,0)*(*TsTw_tran)[0][2]
+            + (*in_func)(x,y,1)*(*TsTw_tran)[1][2]
+            + (*in_func)(x,y,2)*(*TsTw_tran)[2][2])
+                                                      , 0);
+  return transform;
+}
 
-    // Reverse color map and white balance transform
-    Func rev_transform("rev_transform");
-      rev_transform(x,y,c) = max( select(
-        // Perform matrix multiplication, set min of 0
-        c == 0, rev_rbf_biases(x,y,0)*TsTw_tran[0][0]
-              + rev_rbf_biases(x,y,1)*TsTw_tran[1][0]
-              + rev_rbf_biases(x,y,2)*TsTw_tran[2][0],
-        c == 1, rev_rbf_biases(x,y,0)*TsTw_tran[0][1]
-              + rev_rbf_biases(x,y,1)*TsTw_tran[1][1]
-              + rev_rbf_biases(x,y,2)*TsTw_tran[2][1],
-                rev_rbf_biases(x,y,0)*TsTw_tran[0][2]
-              + rev_rbf_biases(x,y,1)*TsTw_tran[1][2]
-              + rev_rbf_biases(x,y,2)*TsTw_tran[2][2])
-                                                        , 0);
-*/
