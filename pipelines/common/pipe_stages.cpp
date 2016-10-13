@@ -1,25 +1,58 @@
 
-#include "Halide.h"
+#include "pipe_stages.h"
 
 using namespace Halide;
+using namespace cv;
 
-buffer_t make_char_buffer( unsigned char* data ) {
-  // Construct data buffer
-  buffer_t buf  = {0};
-  // Connect to image data
-  buf.host      = data;
-  // 8 bit image
-  buf.elem_size = 1;
-  // Set dimension sizes
-  buf.extent[0] = 32; //x: width
-  buf.extent[1] = 32; //y: height
-  buf.extent[2] = 3;  //c: num colors
-  // Set dimension strides for interleaved
-  buf.stride[0] = 3;
-  buf.stride[1] = 3*32;
-  buf.stride[2] = 1;
-  return buf;
+///////////////////////////////////////////////////////////////////////////////////////
+// Conversion functions
+
+Mat Image2Mat( Image<float> InImage ) {
+  Mat OutMat(InImage.height(),InImage.width(),CV_32FC3);
+  vector<Mat> three_channels;
+  split(OutMat, three_channels);
+
+  // Convert from planar RGB memory storage to interleaved BGR memory storage
+  for (int y=0; y<InImage.height(); y++) {
+    for (int x=0; x<InImage.width(); x++) {
+      // Blue channel
+      three_channels[0].at<float>(y,x) = InImage(x,y,2);
+      // Green channel
+      three_channels[1].at<float>(y,x) = InImage(x,y,1);
+      // Red channel
+      three_channels[2].at<float>(y,x) = InImage(x,y,0);
+    }
+  }
+
+  merge(three_channels, OutMat);
+
+  return OutMat;
 }
+
+Image<float> Mat2Image( Mat InMat ) {
+  Image<float> OutImage(InMat.cols,InMat.rows,3);
+  vector<Mat> three_channels;
+  split(InMat, three_channels);
+
+  // Convert from interleaved BGR memory storage to planar RGB memory storage
+  for (int y=0; y<InMat.rows; y++) {
+    for (int x=0; x<InMat.cols; x++) {
+      // Blue channel
+      OutImage(x,y,2) = three_channels[0].at<float>(y,x);
+      // Green channel
+      OutImage(x,y,1) = three_channels[1].at<float>(y,x);
+      // Red channel
+      OutImage(x,y,0) = three_channels[2].at<float>(y,x);
+    }
+  }
+
+  return OutImage;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////
+// OpenCV Funcs for camera pipeline
+
+
 
 ///////////////////////////////////////////////////////////////////////////////////////
 // Halide Funcs for camera pipeline
@@ -32,7 +65,8 @@ Func make_scale( Image<uint8_t> *in_img ) {
   return scale;
 }
 
-Func make_descale( Func *in_func ) {
+Func make_descale( Image<float> *in_func ) {
+//Func make_descale( Func *in_func ) {
   Var x, y, c;
   // de-scale from 0-1 range to 0-255 range, and cast to 8 bit 
   Func descale("descale");

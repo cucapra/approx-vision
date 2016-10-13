@@ -1,17 +1,16 @@
 
 #include "Halide.h"
-#include "../common/halide_stages.h"
+#include "halide_image_io.h"
+#include <opencv2/opencv.hpp>
+#include <stdio.h>
+#include <math.h>
+#include "../common/pipe_stages.h"
 #include "../common/ImgPipeConfig.h"
 #include "../common/LoadCamModel.h"
 #include "../common/MatrixOps.h"
-#include <stdio.h>
-#include <math.h>
-#include "halide_image_io.h"
-#include <opencv2/opencv.hpp>
 
-// This is the full reverse pipeline, converting sRGB to raw
 
-// Reversible pipeline function
+
 int main(int argc, char **argv) {
 
   using namespace std;  
@@ -104,15 +103,12 @@ int main(int argc, char **argv) {
   Var x, y, c;
 
   // Define input image 
+  Image<uint8_t> input(32,32,3);
 
   ///////////////////////////////////////////////////////////////////////////////////////
   // Process Images
  
-
   for (int i=0; i<1; i++) { //i<10000
-
-    // Define input data
-    unsigned char* in_data = new unsigned char[3 * 32 * 32];
 
     // Read in label
     infile.read(&val,1);
@@ -123,76 +119,51 @@ int main(int argc, char **argv) {
       for (int y=0; y<32; y++) {
         for (int x=0; x<32; x++) {
           infile.read(&val,1);
-          //in_data[(c*32*32) + (y*32) + x] = (unsigned char)val;
-          in_data[(c) + (y*3*32) + (x*3)] = (uint8_t)val;
-          //input(x,y,c) = (unsigned char)val;
+          input(x,y,c) = (unsigned char)val;
         }
       }
     }
 
-    Mat cv_image(32,32,CV_8UC3,in_data);
-    imwrite("cv_image.png",cv_image);
+    save_image(input, "input.png");
 
-/*
-    // Construct data buffer
-    buffer_t input_buf  = {0};
-    // Connect to image data
-    input_buf.host      = in_data;
-    // 8 bit image
-    input_buf.elem_size = 1;
-    // Set dimension sizes
-    input_buf.extent[0] = 32; //x: width
-    input_buf.extent[1] = 32; //y: height
-    input_buf.extent[2] = 3;  //c: num colors
-    // Set dimension strides for interleaved
-    input_buf.stride[0] = 3;    
-    input_buf.stride[1] = 3*32; 
-    input_buf.stride[2] = 1;  
-*/
+    ///////////////////////////////////////////////////////////////////////////////////////
+    // Camera pipeline
 
+    int width  = input.width();
+    int height = input.height();
 
-    buffer_t buffer;
-    memset(&buffer, 0, sizeof(buffer));
-    buffer.host = cv_image.data;
-    buffer.elem_size = cv_image.elemSize1();
-    buffer.extent[0] = cv_image.cols;
-    buffer.extent[1] = cv_image.rows;
-    buffer.extent[2] = cv_image.channels();
-    buffer.stride[0] = cv_image.step1(1);
-    buffer.stride[1] = cv_image.step1(0);
-    buffer.stride[2] = 1;
+    Func scale = make_scale(&input);
+    Image<float> scale_out_halide = scale.realize(width,height,3);
 
-    Image<uint8_t> input(buffer);
+    Mat scale_out_opencv = Image2Mat(scale_out_halide);
+    Mat cv_file;
+    scale_out_opencv.convertTo(cv_file,CV_8UC3,255.0);
+
+    imwrite("scale_out_opencv.png",cv_file);
+
+    Image<float> scale_out_halide_ = Mat2Image(scale_out_opencv);
+
+    Func descale = make_descale(&scale_out_halide_);
+    Image<uint8_t> output = descale.realize(width,height,3);
+    save_image(output,"output.png");
+
 
 
     ///////////////////////////////////////////////////////////////////////////////////////
-    // Halide Funcs for camera pipeline
-
-    // Cast input to float and scale according to its 8 bit input format
-    Func scale   = make_scale(&input);
-    Func descale = make_descale(&scale);
-
-    // Realization
-    Image<uint8_t> output;
-    // backward pipeline
-    output = descale.realize(input.width(), 
-                             input.height(), 
-                             input.channels());
-
-
-    ////////////////////////////////////////////////////////////////////////
     // Save the output
-    save_image(input, "input.png");
-    save_image(output, "output.png");
+
+    //save_image(output, "output.png");
 
     // Read in label
     val = label;
     outfile.write(&val,1);
+    //infile.read(&val,1);
+    //label = val;
     
     for (int c=0; c<3; c++) { 
       for (int y=0; y<32; y++) {
         for (int x=0; x<32; x++) {
-          val = in_data[(c) + (y*3*32) + (x*3)];
+          val = output(x,y,c);
           outfile.write(&val,1);
         }
       }
