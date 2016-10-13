@@ -186,8 +186,23 @@ int main(int argc, char **argv) {
                                                   &rev_tone_h ); 
 
     // Scale back to 0-255 and represent in 8 bit fixed point
-    Func descale            = make_descale      ( &rev_transform );
+    Func descale            = make_descale      ( &tone_map );
 
+    ///////////////////////////////////////////////////////////////////////////////////////
+    // Scheduling
+
+    // Because we use recursive function calls, necessary to compute in steps
+    rev_tone_map.compute_root();
+    rev_gamut_map_ctrl.compute_root();
+    rev_gamut_map_bias.compute_root();
+    rev_transform.compute_root();
+    transform.compute_root();
+    gamut_map_ctrl.compute_root();
+    gamut_map_bias.compute_root();
+    tone_map.compute_root();
+
+    // Use JIT compiler
+    descale.compile_jit();
     Image<uint8_t> output = descale.realize(width,height,3);    
 
     ///////////////////////////////////////////////////////////////////////////////////////

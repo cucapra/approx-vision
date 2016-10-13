@@ -33,13 +33,6 @@ Func make_rbf_ctrl_pts( Func *in_func,
                         Image<float> *ctrl_pts_h,
                         Image<float> *weights_h );
 
-Func make_rbf_ctrl_pts_( Func *in_func,
-                        int num_ctrl_pts,
-                        Image<float> *ctrl_pts_h,
-                        Image<float> *weights_h );
-
-
-
 Func make_rbf_biases( Func *in_func,
                       Func *rbf_ctrl_pts,
                       vector<vector<float>> *coefs );
