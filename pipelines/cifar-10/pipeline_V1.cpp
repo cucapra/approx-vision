@@ -9,7 +9,13 @@
 #include "../common/LoadCamModel.h"
 #include "../common/MatrixOps.h"
 
-
+// Pipeline V1 
+// 
+// Test type: 
+// Full Reverse
+// 
+// Stages:
+// Rto, Rg, Rtr, Renos, Remos
 
 int main(int argc, char **argv) {
 
@@ -32,6 +38,7 @@ int main(int argc, char **argv) {
 
   // Declare model parameters
   vector<vector<float>> Ts, Tw, TsTw;
+  vector<vector<float>> rev_ctrl_pts, rev_weights, rev_coefs;
   vector<vector<float>> ctrl_pts, weights, coefs;
   vector<vector<float>> rev_tone;
 
@@ -40,34 +47,56 @@ int main(int argc, char **argv) {
   // ctrl_pts, weights, and coefs are either forward or backward
   // tone mapping is always backward
   // This is due to the the camera model format
-  Ts        = get_Ts       (cam_model_path);
-  Tw        = get_Tw       (cam_model_path, wb_index);
-  TsTw      = get_TsTw     (cam_model_path, wb_index);
-  ctrl_pts  = get_ctrl_pts (cam_model_path, num_ctrl_pts, 0);
-  weights   = get_weights  (cam_model_path, num_ctrl_pts, 0);
-  coefs     = get_coefs    (cam_model_path, num_ctrl_pts, 0);
-  rev_tone  = get_rev_tone (cam_model_path);
+  Ts            = get_Ts       (cam_model_path);
+  Tw            = get_Tw       (cam_model_path, wb_index);
+  TsTw          = get_TsTw     (cam_model_path, wb_index);
+  rev_ctrl_pts  = get_ctrl_pts (cam_model_path, num_ctrl_pts, 0);
+  rev_weights   = get_weights  (cam_model_path, num_ctrl_pts, 0);
+  rev_coefs     = get_coefs    (cam_model_path, num_ctrl_pts, 0);
+  ctrl_pts      = get_ctrl_pts (cam_model_path, num_ctrl_pts, 1);
+  weights       = get_weights  (cam_model_path, num_ctrl_pts, 1);
+  coefs         = get_coefs    (cam_model_path, num_ctrl_pts, 1); 
+  rev_tone      = get_rev_tone (cam_model_path);
 
   // Take the transpose of the color map and white balance transform for later use
-  vector<vector<float>> TsTw_tran = transpose_mat (TsTw);
+  vector<vector<float>> TsTw_tran     = transpose_mat(TsTw);
 
-  // take the inverse of TsTw_tran
-  TsTw_tran = inv_3x3mat(TsTw_tran);
+  // Create an inverse of TsTw_tran
+  vector<vector<float>> TsTw_tran_inv = inv_3x3mat(TsTw_tran);
 
   using namespace Halide;
   using namespace Halide::Tools;
   using namespace cv;
 
-  // Convert control points to a Halide image
-  int width  = ctrl_pts[0].size();
-  int length = ctrl_pts.size();
+  // Convert backward control points to a Halide image
+  int width  = rev_ctrl_pts[0].size();
+  int length = rev_ctrl_pts.size();
+  Image<float> rev_ctrl_pts_h(width,length);
+  for (int y=0; y<length; y++) {
+    for (int x=0; x<width; x++) {
+      rev_ctrl_pts_h(x,y) = rev_ctrl_pts[y][x];
+    }
+  }
+  // Convert backward weights to a Halide image
+  width  = rev_weights[0].size();
+  length = rev_weights.size();
+  Image<float> rev_weights_h(width,length);
+  for (int y=0; y<length; y++) {
+    for (int x=0; x<width; x++) {
+      rev_weights_h(x,y) = rev_weights[y][x];
+    }
+  }
+
+  // Convert forward control points to a Halide image
+  width  = ctrl_pts[0].size();
+  length = ctrl_pts.size();
   Image<float> ctrl_pts_h(width,length);
   for (int y=0; y<length; y++) {
     for (int x=0; x<width; x++) {
       ctrl_pts_h(x,y) = ctrl_pts[y][x];
     }
   }
-  // Convert weights to a Halide image
+  // Convert forward weights to a Halide image
   width  = weights[0].size();
   length = weights.size();
   Image<float> weights_h(width,length);
@@ -76,6 +105,7 @@ int main(int argc, char **argv) {
       weights_h(x,y) = weights[y][x];
     }
   }
+
   // Convert the reverse tone mapping function to a Halide image
   width  = 3;
   length = 256;
@@ -108,7 +138,7 @@ int main(int argc, char **argv) {
   ///////////////////////////////////////////////////////////////////////////////////////
   // Process Images
  
-  for (int i=0; i<1; i++) { //i<10000
+  for (int i=0; i<10000; i++) { //i<10000
 
     // Read in label
     infile.read(&val,1);
@@ -124,7 +154,7 @@ int main(int argc, char **argv) {
       }
     }
 
-    save_image(input, "input.png");
+    //save_image(input, "input.png");
 
     ///////////////////////////////////////////////////////////////////////////////////////
     // Camera pipeline
@@ -132,22 +162,49 @@ int main(int argc, char **argv) {
     int width  = input.width();
     int height = input.height();
 
-    Func scale = make_scale(&input);
-    Image<float> scale_out_halide = scale.realize(width,height,3);
+    // Scale to 0-1 range and represent in floating point
+    Func scale              = make_scale        ( &input);
 
-    Mat scale_out_opencv = Image2Mat(scale_out_halide);
-    Mat cv_file;
-    scale_out_opencv.convertTo(cv_file,CV_8UC3,255.0);
+    // Backward pipeline
+    Func rev_tone_map       = make_rev_tone_map ( &scale,
+                                                  &rev_tone_h );
+    Func rev_gamut_map_ctrl = make_rbf_ctrl_pts ( &rev_tone_map,
+                                                  num_ctrl_pts,
+                                                  &rev_ctrl_pts_h,
+                                                  &rev_weights_h );
+    Func rev_gamut_map_bias = make_rbf_biases   ( &rev_tone_map,
+                                                  &rev_gamut_map_ctrl,
+                                                  &rev_coefs );
+    Func rev_transform      = make_transform    ( &rev_gamut_map_bias,
+                                                  &TsTw_tran_inv );
 
-    imwrite("scale_out_opencv.png",cv_file);
+    rev_tone_map.compute_root();
+    rev_gamut_map_ctrl.compute_root();    
 
-    Image<float> scale_out_halide_ = Mat2Image(scale_out_opencv);
+    Image<float> opencv_in_image = rev_transform.realize(width, height, 3);
 
-    Func descale = make_descale(&scale_out_halide_);
-    Image<uint8_t> output = descale.realize(width,height,3);
-    save_image(output,"output.png");
+    Mat opencv_in_mat = Image2Mat(&opencv_in_image);
 
+    OpenCV_renoise(&opencv_in_mat);
 
+    OpenCV_remosaic(&opencv_in_mat);
+
+    Image<float> opencv_out = Mat2Image(&opencv_in_mat);
+
+    Func Image2Func         = make_Image2Func   ( &opencv_out );
+
+    // Scale back to 0-255 and represent in 8 bit fixed point
+    Func descale            = make_descale      ( &Image2Func );
+
+    transform.compute_root();
+    gamut_map_ctrl.compute_root();
+
+    ///////////////////////////////////////////////////////////////////////////////////////
+    // Scheduling
+
+    // Use JIT compiler
+    descale.compile_jit();
+    Image<uint8_t> output = descale.realize(width,height,3);    
 
     ///////////////////////////////////////////////////////////////////////////////////////
     // Save the output
@@ -175,4 +232,5 @@ int main(int argc, char **argv) {
 
   return 0;
 }
+
 

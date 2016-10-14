@@ -9,7 +9,13 @@
 #include "../common/LoadCamModel.h"
 #include "../common/MatrixOps.h"
 
-
+// Pipeline V3
+// 
+// Test type: 
+// Only do gamut mapping
+// 
+// Stages:
+// Rto, Rg, Rtr, Renos, Remos, Fg
 
 int main(int argc, char **argv) {
 
@@ -132,7 +138,7 @@ int main(int argc, char **argv) {
   ///////////////////////////////////////////////////////////////////////////////////////
   // Process Images
  
-  for (int i=0; i<1; i++) { //i<10000
+  for (int i=0; i<10000; i++) { //i<10000
 
     // Read in label
     infile.read(&val,1);
@@ -148,7 +154,7 @@ int main(int argc, char **argv) {
       }
     }
 
-    save_image(input, "input.png");
+    //save_image(input, "input.png");
 
     ///////////////////////////////////////////////////////////////////////////////////////
     // Camera pipeline
@@ -159,31 +165,50 @@ int main(int argc, char **argv) {
     // Scale to 0-1 range and represent in floating point
     Func scale              = make_scale        ( &input);
 
-    Image<float> scale_out_halide = scale.realize(width, height, 3);
+    // Backward pipeline
+    Func rev_tone_map       = make_rev_tone_map ( &scale,
+                                                  &rev_tone_h );
+    Func rev_gamut_map_ctrl = make_rbf_ctrl_pts ( &rev_tone_map,
+                                                  num_ctrl_pts,
+                                                  &rev_ctrl_pts_h,
+                                                  &rev_weights_h );
+    Func rev_gamut_map_bias = make_rbf_biases   ( &rev_tone_map,
+                                                  &rev_gamut_map_ctrl,
+                                                  &rev_coefs );
+    Func rev_transform      = make_transform    ( &rev_gamut_map_bias,
+                                                  &TsTw_tran_inv );
 
-    Mat scale_out_opencv = Image2Mat(&scale_out_halide);
+    rev_tone_map.compute_root();
+    rev_gamut_map_ctrl.compute_root();    
 
-    OpenCV_renoise(&scale_out_opencv);
+    Image<float> opencv_in_image = rev_transform.realize(width, height, 3);
 
-    Image<float> descale_in_halide = Mat2Image(&scale_out_opencv);
+    Mat opencv_in_mat = Image2Mat(&opencv_in_image);
 
-    Func Image2Func         = make_Image2Func   ( &descale_in_halide );
+    OpenCV_renoise(&opencv_in_mat);
+
+    OpenCV_remosaic(&opencv_in_mat);
+
+    Image<float> opencv_out = Mat2Image(&opencv_in_mat);
+
+    Func Image2Func         = make_Image2Func   ( &opencv_out );
+
+    Func gamut_map_ctrl     = make_rbf_ctrl_pts ( &Image2Func,
+                                                  num_ctrl_pts,
+                                                  &ctrl_pts_h,
+                                                  &weights_h );
+    Func gamut_map_bias     = make_rbf_biases   ( &Image2Func,
+                                                  &gamut_map_ctrl,
+                                                  &coefs );
 
     // Scale back to 0-255 and represent in 8 bit fixed point
-    Func descale            = make_descale      ( &Image2Func );
+    Func descale            = make_descale      ( &gamut_map_bias );
+
+    transform.compute_root();
+    gamut_map_ctrl.compute_root();
 
     ///////////////////////////////////////////////////////////////////////////////////////
     // Scheduling
-
-    // Because we use recursive function calls, necessary to compute in steps
-    //rev_tone_map.compute_root();
-    //rev_gamut_map_ctrl.compute_root();
-    //rev_gamut_map_bias.compute_root();
-    //rev_transform.compute_root();
-    //transform.compute_root();
-    //gamut_map_ctrl.compute_root();
-    //gamut_map_bias.compute_root();
-    //tone_map.compute_root();
 
     // Use JIT compiler
     descale.compile_jit();
@@ -192,7 +217,7 @@ int main(int argc, char **argv) {
     ///////////////////////////////////////////////////////////////////////////////////////
     // Save the output
 
-    save_image(output, "output.png");
+    //save_image(output, "output.png");
 
     // Read in label
     val = label;
@@ -215,4 +240,5 @@ int main(int argc, char **argv) {
 
   return 0;
 }
+
 

@@ -64,20 +64,120 @@ Func make_Image2Func ( Image<float> *InImage ) {
 ///////////////////////////////////////////////////////////////////////////////////////
 // OpenCV Funcs for camera pipeline
 
+float enforce_range (float in) {
+
+  float out = in;
+  if (in < 0) {
+    out = 0;
+  }
+  if (in > 1) {
+    out = 1;
+  }
+
+  return out;
+}
+
+
+void OpenCV_renoise ( Mat *InMat ) {
+  // "Image informative maps for componentwise estimating parameters of 
+  // signal-dependent noise"
+
+  int height = (*InMat).rows;
+  int width  = (*InMat).cols;
+
+  // Establish matrices input and output
+  Mat in_double(height,width,CV_64FC3);
+  // This is because noise parameters are for 12 bit
+  (*InMat).convertTo(in_double,CV_64FC3,4096.0/1.0);
+  vector<Mat> three_channels;
+  split(in_double, three_channels);
+
+  Mat out_double(height,width,CV_64FC3);
+  Mat out_float(height,width,CV_32FC3);
+
+  // noised_pixel = unnoised_pixel + 
+  //                  gaussian_rand( std_dev = sqrt(a*unnoised_pixel + b) )
+  // a and b values vary between channels
+  double red_a, red_b, green_a, green_b, blue_a, blue_b;
+
+  red_a   =  0.1460;
+  red_b   =  7.6876;
+  green_a =  0.1352;
+  green_b =  5.0834;
+  blue_a  =  0.1709;
+  blue_b  = 12.3381;
+
+/*
+  red_a   =  1;
+  red_b   =  10;
+  green_a =  red_a;
+  green_b =  red_b;
+  blue_a  =  red_a;
+  blue_b  =  red_b;
+*/
+
+  // Define the random number generator
+  RNG rng(0xDEADBEEF);
+
+  double red_std, green_std, blue_std;
+  for (int y=0; y<height; y++) {
+    for (int x=0; x<width; x++) {
+      // Compute the channel noise standard deviation
+      red_std   = sqrt(
+        (red_a   * three_channels[2].at<double>(y,x)) + red_b   );
+      green_std = sqrt(
+        (green_a * three_channels[1].at<double>(y,x)) + green_b );
+      blue_std  = sqrt(
+        (blue_a  * three_channels[0].at<double>(y,x)) + blue_b  );
+
+      // NOTE: OpenCV stores in BGR order (not RGB)
+      // Blue channel
+      three_channels[0].at<double>(y,x) = three_channels[0].at<double>(y,x) +
+        (rng.gaussian(blue_std));
+      // Green channel
+      three_channels[1].at<double>(y,x) = three_channels[1].at<double>(y,x) +
+        (rng.gaussian(green_std));
+      // Red channel
+      three_channels[2].at<double>(y,x) = three_channels[2].at<double>(y,x) +
+        (rng.gaussian(red_std));
+
+    }
+  }
+
+  merge(three_channels, out_double);
+  out_double.convertTo(out_float,CV_32FC3,1.0/4096.0);
+  
+  *InMat = out_float;
+}
+
+
+void OpenCV_gaussian_blur ( Mat *InMat ) {
+
+  Mat OutMat;
+  cv::GaussianBlur(*InMat,OutMat, Size(3,3), 0.5, 0);
+  *InMat = OutMat;
+
+}
+
+
+
+/*
 void OpenCV_renoise ( Mat *InMat ) {
 
   vector<Mat> three_channels;
   cv::split((*InMat), three_channels);
 
   // Define the random number generator
-  cv::RNG rng(0xDEADBEEF);
+  cv::RNG rng(0xDEADEEEF);
 
   // Noise parameters
   // noised_pixel = unnoised_pixel + 
   //                  gaussian_rand( std_dev = q * sqrt(unnoised_pixel - p) )
   // q and p values do not vary between channels
 
-  float q = 0.0060;
+//  float q = 0.0060;
+  float q = 0.060;
+
   float p = 0.0500;
   float red_std, green_std, blue_std;
 
@@ -93,19 +193,82 @@ void OpenCV_renoise ( Mat *InMat ) {
 
       // NOTE: OpenCV stores in BGR order (not RGB)
       // Blue channel
-      three_channels[0].at<float>(y,x) = three_channels[0].at<float>(y,x) +
-        (rng.gaussian(blue_std));
+      three_channels[0].at<float>(y,x) = 
+        enforce_range (
+        three_channels[0].at<float>(y,x) +
+        (rng.gaussian(blue_std)));
       // Green channel
-      three_channels[1].at<float>(y,x) = three_channels[1].at<float>(y,x) +
-        (rng.gaussian(green_std));
+      three_channels[1].at<float>(y,x) = 
+        enforce_range(
+        three_channels[1].at<float>(y,x) +
+        (rng.gaussian(green_std)));
       // Red channel
-      three_channels[2].at<float>(y,x) = three_channels[2].at<float>(y,x) +
-        (rng.gaussian(red_std));
+      three_channels[2].at<float>(y,x) = 
+        enforce_range(
+        three_channels[2].at<float>(y,x) +
+        (rng.gaussian(red_std)));
     }
   }
   cv::merge(three_channels, *InMat);
 }
+*/
 
+
+void OpenCV_remosaic (Mat *InMat ) {
+
+  vector<Mat> three_channels;
+  cv::split((*InMat), three_channels);
+
+  // Re-mosaic aka re-bayer the image
+  // G R
+  // B G
+
+  // Note: OpenCV stores as BGR not RGB
+  for (int y=0; y<(*InMat).rows; y++) {
+    for (int x=0; x<(*InMat).cols; x++) {
+      // If an even row
+      if ( y%2 == 0 ) {
+        // If an even column
+        if ( x%2 == 0 ) {
+          // Green pixel, remove blue and red
+          three_channels[0].at<float>(y,x) = 0; 
+          three_channels[2].at<float>(y,x) = 0;
+          // Also divide the green by half to account
+          // for interpolation reversal
+          three_channels[1].at<float>(y,x) = 
+            three_channels[1].at<float>(y,x) / 2;
+        }
+        // If an odd column
+        else {
+          // Red pixel, remove blue and green
+          three_channels[0].at<float>(y,x) = 0;
+          three_channels[1].at<float>(y,x) = 0;
+        }
+      }
+      // If an odd row
+      else {
+        // If an even column
+        if ( x%2 == 0 ) {
+          // Blue pixel, remove red and green
+          three_channels[2].at<float>(y,x) = 0;
+          three_channels[1].at<float>(y,x) = 0;
+        }
+        // If an odd column
+        else {
+          // Green pixel, remove blue and red
+          three_channels[0].at<float>(y,x) = 0;
+          three_channels[2].at<float>(y,x) = 0;
+          // Also divide the green by half to account
+          // for interpolation reversal
+          three_channels[1].at<float>(y,x) = 
+            three_channels[1].at<float>(y,x) / 2;
+        }
+      }
+    }
+  }
+  cv::merge(three_channels, *InMat);
+
+}
 
 ///////////////////////////////////////////////////////////////////////////////////////
 // Halide Funcs for camera pipeline

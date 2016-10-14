@@ -9,13 +9,13 @@
 #include "../common/LoadCamModel.h"
 #include "../common/MatrixOps.h"
 
-// Pipeline V2
+// Pipeline V8 
 // 
 // Test type: 
-// Only do tone mapping
+// Skip only gamut mapping
 // 
 // Stages:
-// Rto, Rg, Rtr, Renos, Remos, Fto
+// Rto, Rg, Fto
 
 int main(int argc, char **argv) {
 
@@ -175,32 +175,15 @@ int main(int argc, char **argv) {
     Func rev_gamut_map_bias = make_rbf_biases   ( &rev_tone_map,
                                                   &rev_gamut_map_ctrl,
                                                   &rev_coefs );
-    Func rev_transform      = make_transform    ( &rev_gamut_map_bias,
-                                                  &TsTw_tran_inv );
-
     rev_tone_map.compute_root();
     rev_gamut_map_ctrl.compute_root();    
 
-    Image<float> opencv_in_image = rev_transform.realize(width, height, 3);
-
-    Mat opencv_in_mat = Image2Mat(&opencv_in_image);
-
-    OpenCV_renoise(&opencv_in_mat);
-
-    OpenCV_remosaic(&opencv_in_mat);
-
-    Image<float> opencv_out = Mat2Image(&opencv_in_mat);
-
-    Func Image2Func         = make_Image2Func   ( &opencv_out );
-
-    Func tone_map           = make_tone_map     ( &Image2Func,
+    Func tone_map           = make_tone_map     ( &rev_gamut_map_bias,
                                                   &rev_tone_h );
 
     // Scale back to 0-255 and represent in 8 bit fixed point
     Func descale            = make_descale      ( &tone_map );
 
-    transform.compute_root();
-    gamut_map_ctrl.compute_root();
 
     ///////////////////////////////////////////////////////////////////////////////////////
     // Scheduling

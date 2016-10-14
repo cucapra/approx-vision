@@ -20,6 +20,10 @@ Func make_Image2Func ( Image<float> *InImage );
 
 void OpenCV_renoise ( Mat *InMat );
 
+void OpenCV_remosaic (Mat *InMat );
+
+void OpenCV_gaussian_blur ( Mat *InMat );
+
 ///////////////////////////////////////////////////////////////////////////////////////
 // Halide Funcs for camera pipeline
 
@@ -43,4 +47,4 @@ Func make_rbf_biases( Func *in_func,
 Func make_transform( Func *in_func, 
                      vector<vector<float>> *TsTw_tran );
 
-Image<float> gaussian_blur(Image<float> in);
+Image<float> gaussian_blur(Image<float> *in);

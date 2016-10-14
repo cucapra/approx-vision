@@ -9,13 +9,13 @@
 #include "../common/LoadCamModel.h"
 #include "../common/MatrixOps.h"
 
-// Pipeline V2
+// Pipeline V4
 // 
 // Test type: 
-// Only do tone mapping
+// Only do transform
 // 
 // Stages:
-// Rto, Rg, Rtr, Renos, Remos, Fto
+// Rto, Rg, Rtr, Renos, Remos, Ftr
 
 int main(int argc, char **argv) {
 
@@ -193,11 +193,11 @@ int main(int argc, char **argv) {
 
     Func Image2Func         = make_Image2Func   ( &opencv_out );
 
-    Func tone_map           = make_tone_map     ( &Image2Func,
-                                                  &rev_tone_h );
+    Func transform          = make_transform    ( &Image2Func,
+                                                  &TsTw_tran );
 
     // Scale back to 0-255 and represent in 8 bit fixed point
-    Func descale            = make_descale      ( &tone_map );
+    Func descale            = make_descale      ( &transform );
 
     transform.compute_root();
     gamut_map_ctrl.compute_root();
