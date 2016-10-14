@@ -204,7 +204,6 @@ int main(int argc, char **argv) {
     // Scale back to 0-255 and represent in 8 bit fixed point
     Func descale            = make_descale      ( &gamut_map_bias );
 
-    transform.compute_root();
     gamut_map_ctrl.compute_root();
 
     ///////////////////////////////////////////////////////////////////////////////////////

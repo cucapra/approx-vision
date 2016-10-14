@@ -200,7 +200,6 @@ int main(int argc, char **argv) {
     Func descale            = make_descale      ( &transform );
 
     transform.compute_root();
-    gamut_map_ctrl.compute_root();
 
     ///////////////////////////////////////////////////////////////////////////////////////
     // Scheduling
