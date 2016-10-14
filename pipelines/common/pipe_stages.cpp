@@ -3,24 +3,27 @@
 
 using namespace Halide;
 using namespace cv;
+using namespace std;
 
 ///////////////////////////////////////////////////////////////////////////////////////
 // Conversion functions
 
-Mat Image2Mat( Image<float> InImage ) {
-  Mat OutMat(InImage.height(),InImage.width(),CV_32FC3);
+Mat Image2Mat( Image<float> *InImage ) {
+  int height = (*InImage).height();
+  int width  = (*InImage).width();
+  Mat OutMat(height,width,CV_32FC3);
   vector<Mat> three_channels;
   split(OutMat, three_channels);
 
   // Convert from planar RGB memory storage to interleaved BGR memory storage
-  for (int y=0; y<InImage.height(); y++) {
-    for (int x=0; x<InImage.width(); x++) {
+  for (int y=0; y<height; y++) {
+    for (int x=0; x<width; x++) {
       // Blue channel
-      three_channels[0].at<float>(y,x) = InImage(x,y,2);
+      three_channels[0].at<float>(y,x) = (*InImage)(x,y,2);
       // Green channel
-      three_channels[1].at<float>(y,x) = InImage(x,y,1);
+      three_channels[1].at<float>(y,x) = (*InImage)(x,y,1);
       // Red channel
-      three_channels[2].at<float>(y,x) = InImage(x,y,0);
+      three_channels[2].at<float>(y,x) = (*InImage)(x,y,0);
     }
   }
 
@@ -29,14 +32,16 @@ Mat Image2Mat( Image<float> InImage ) {
   return OutMat;
 }
 
-Image<float> Mat2Image( Mat InMat ) {
-  Image<float> OutImage(InMat.cols,InMat.rows,3);
+Image<float> Mat2Image( Mat *InMat ) {
+  int height = (*InMat).rows;
+  int width  = (*InMat).cols;
+  Image<float> OutImage(width,height,3);
   vector<Mat> three_channels;
-  split(InMat, three_channels);
+  split((*InMat), three_channels);
 
   // Convert from interleaved BGR memory storage to planar RGB memory storage
-  for (int y=0; y<InMat.rows; y++) {
-    for (int x=0; x<InMat.cols; x++) {
+  for (int y=0; y<height; y++) {
+    for (int x=0; x<width; x++) {
       // Blue channel
       OutImage(x,y,2) = three_channels[0].at<float>(y,x);
       // Green channel
@@ -49,9 +54,57 @@ Image<float> Mat2Image( Mat InMat ) {
   return OutImage;
 }
 
+Func make_Image2Func ( Image<float> *InImage ) {
+  Var x, y, c;
+  Func Image2Func("Image2Func");
+    Image2Func(x,y,c) = (*InImage)(x,y,c);
+  return Image2Func;
+}
+
 ///////////////////////////////////////////////////////////////////////////////////////
 // OpenCV Funcs for camera pipeline
 
+void OpenCV_renoise ( Mat *InMat ) {
+
+  vector<Mat> three_channels;
+  cv::split((*InMat), three_channels);
+
+  // Define the random number generator
+  cv::RNG rng(0xDEADBEEF);
+
+  // Noise parameters
+  // noised_pixel = unnoised_pixel + 
+  //                  gaussian_rand( std_dev = q * sqrt(unnoised_pixel - p) )
+  // q and p values do not vary between channels
+
+  float q = 0.0060;
+  float p = 0.0500;
+  float red_std, green_std, blue_std;
+
+  for (int y=0; y<(*InMat).rows; y++) {
+    for (int x=0; x<(*InMat).cols; x++) {
+      // Compute the channel noise standard deviation
+      red_std   = q * sqrt(
+        (three_channels[2].at<float>(y,x)) - p );
+      green_std = q * sqrt(
+        (three_channels[1].at<float>(y,x)) - p );
+      blue_std  = q * sqrt(
+        (three_channels[0].at<float>(y,x)) - p );
+
+      // NOTE: OpenCV stores in BGR order (not RGB)
+      // Blue channel
+      three_channels[0].at<float>(y,x) = three_channels[0].at<float>(y,x) +
+        (rng.gaussian(blue_std));
+      // Green channel
+      three_channels[1].at<float>(y,x) = three_channels[1].at<float>(y,x) +
+        (rng.gaussian(green_std));
+      // Red channel
+      three_channels[2].at<float>(y,x) = three_channels[2].at<float>(y,x) +
+        (rng.gaussian(red_std));
+    }
+  }
+  cv::merge(three_channels, *InMat);
+}
 
 
 ///////////////////////////////////////////////////////////////////////////////////////
@@ -61,7 +114,7 @@ Func make_scale( Image<uint8_t> *in_img ) {
   Var x, y, c;
   // Cast input to float and scale from 8 bit 0-255 range to 0-1 range
   Func scale("scale");
-    scale(x,y,c) = cast<float>( (*in_img)(x,y,c) ) / 256;
+    scale(x,y,c) = cast<float>( (*in_img)(x,y,c) ) / 255;
   return scale;
 }
 
@@ -69,7 +122,7 @@ Func make_descale( Func *in_func ) {
   Var x, y, c;
   // de-scale from 0-1 range to 0-255 range, and cast to 8 bit 
   Func descale("descale");
-    descale(x,y,c) = cast<uint8_t>( (*in_func)(x,y,c) * 256 );
+    descale(x,y,c) = cast<uint8_t>( min( max( (*in_func)(x,y,c) * 255, 0), 255 ) );
   return descale;
 }
 
@@ -78,7 +131,7 @@ Func make_rev_tone_map( Func *in_func,
   Var x, y, c;
   // Backward tone mapping
   Func rev_tone_map("rev_tone_map");
-    Expr rev_tone_idx = cast<uint8_t>((*in_func)(x,y,c) * 256.0f);
+    Expr rev_tone_idx = cast<uint8_t>((*in_func)(x,y,c) * 255.0f);
     rev_tone_map(x,y,c) = (*rev_tone_h)(c,rev_tone_idx) ;
   return rev_tone_map;
 }
@@ -166,3 +219,79 @@ Func make_transform( Func *in_func,
   return transform;
 }
 
+// Note: This is an implementation of the noise model found in the paper below:
+// "Noise measurement for raw-data of digital imaging sensors by 
+// automatic segmentation of non-uniform targets"
+float get_normal_dist_rand( float mean, float std_dev ) {
+  std::default_random_engine generator;
+  std::normal_distribution<float> distribution(mean,std_dev);
+  float out = distribution(generator);
+  return out;
+}
+
+Func make_get_std_dev( Func *in_func ) {
+  Var x, y, c;
+  float q = 0.0060;
+  float p = 0.0500;
+  // std_dev = q * sqrt(unnoised_pixel - p)
+  Func get_std_dev("get_std_dev");
+    get_std_dev(x,y,c) = q * sqrt( (*in_func)(x,y,c) - p );
+  return get_std_dev;  
+}
+/*
+Func make_renoise( Func *in_func, Func *std_dev ) {
+  Var x, y, c;
+  // Noise parameters
+  // noised_pixel = unnoised_pixel + 
+  //                  gaussian_rand( std_dev = q * sqrt(unnoised_pixel - p) )
+  // q and p values do not vary between channels
+  Func renoise("renoise");
+    renoise(x,y,c) = (*in_func)(x,y,c) + 
+                       get_normal_dist_rand(0,(*std_dev)(x,y,c));  
+  return renoise;
+}
+*/
+
+
+// Note: This gaussian blur function is adapted from Halide CVPR 2015 code
+Image<float> gaussian_blur(Image<float> *in) {
+
+    // Define a 7x7 Gaussian Blur with a repeat-edge boundary condition.
+    float sigma = 1.5f;
+
+    Var x, y, c;
+    Func kernel;
+    kernel(x) = exp(-x*x/(2*sigma*sigma)) / (sqrtf(2*M_PI)*sigma);
+
+    Func in_bounded = BoundaryConditions::repeat_edge(*in);
+
+    Func blur_y;
+    blur_y(x, y, c) = (kernel(0) * in_bounded(x, y, c) +
+                       kernel(1) * (in_bounded(x, y-1, c) +
+                                    in_bounded(x, y+1, c)) +
+                       kernel(2) * (in_bounded(x, y-2, c) +
+                                    in_bounded(x, y+2, c)) +
+                       kernel(3) * (in_bounded(x, y-3, c) +
+                                    in_bounded(x, y+3, c)));
+
+    Func blur_x;
+    blur_x(x, y, c) = (kernel(0) * blur_y(x, y, c) +
+                       kernel(1) * (blur_y(x-1, y, c) +
+                                    blur_y(x+1, y, c)) +
+                       kernel(2) * (blur_y(x-2, y, c) +
+                                    blur_y(x+2, y, c)) +
+                       kernel(3) * (blur_y(x-3, y, c) +
+                                    blur_y(x+3, y, c)));
+
+    // Schedule it.
+    blur_x.compute_root().vectorize(x, 8).parallel(y);
+    blur_y.compute_at(blur_x, y).vectorize(x, 8);
+ 
+    // Realize the pipeline
+    Image<float> output((*in).width(),
+                        (*in).height(),
+                        (*in).channels());
+    blur_x.realize(output);
+
+    return output;
+}

@@ -148,7 +148,7 @@ int main(int argc, char **argv) {
       }
     }
 
-    //save_image(input, "input.png");
+    save_image(input, "input.png");
 
     ///////////////////////////////////////////////////////////////////////////////////////
     // Camera pipeline
@@ -159,45 +159,29 @@ int main(int argc, char **argv) {
     // Scale to 0-1 range and represent in floating point
     Func scale              = make_scale        ( &input);
 
-    // Backward pipeline
-    Func rev_tone_map       = make_rev_tone_map ( &scale, 
-                                                  &rev_tone_h );
-    Func rev_gamut_map_ctrl = make_rbf_ctrl_pts ( &rev_tone_map,
-                                                  num_ctrl_pts,
-                                                  &rev_ctrl_pts_h,
-                                                  &rev_weights_h );
-    Func rev_gamut_map_bias = make_rbf_biases   ( &rev_tone_map,
-                                                  &rev_gamut_map_ctrl,
-                                                  &rev_coefs );
-    Func rev_transform      = make_transform    ( &rev_gamut_map_bias,
-                                                  &TsTw_tran_inv );
+    Image<float> scale_out_halide = scale.realize(width, height, 3);
 
-    // Forward pipeline
-    Func transform          = make_transform    ( &rev_transform,
-                                                  &TsTw_tran );
-    Func gamut_map_ctrl     = make_rbf_ctrl_pts ( &transform,
-                                                  num_ctrl_pts,
-                                                  &ctrl_pts_h,
-                                                  &weights_h );
-    Func gamut_map_bias     = make_rbf_biases   ( &transform,
-                                                  &gamut_map_ctrl,
-                                                  &coefs );
-    Func tone_map           = make_tone_map     ( &gamut_map_bias,
-                                                  &rev_tone_h ); 
+    Mat scale_out_opencv = Image2Mat(&scale_out_halide);
+
+    OpenCV_renoise(&scale_out_opencv);
+
+    Image<float> descale_in_halide = Mat2Image(&scale_out_opencv);
+
+    Func Image2Func         = make_Image2Func   ( &descale_in_halide );
 
     // Scale back to 0-255 and represent in 8 bit fixed point
-    Func descale            = make_descale      ( &tone_map );
+    Func descale            = make_descale      ( &Image2Func );
 
     ///////////////////////////////////////////////////////////////////////////////////////
     // Scheduling
 
     // Because we use recursive function calls, necessary to compute in steps
-    rev_tone_map.compute_root();
-    rev_gamut_map_ctrl.compute_root();
+    //rev_tone_map.compute_root();
+    //rev_gamut_map_ctrl.compute_root();
     //rev_gamut_map_bias.compute_root();
     //rev_transform.compute_root();
-    transform.compute_root();
-    gamut_map_ctrl.compute_root();
+    //transform.compute_root();
+    //gamut_map_ctrl.compute_root();
     //gamut_map_bias.compute_root();
     //tone_map.compute_root();
 
@@ -208,7 +192,7 @@ int main(int argc, char **argv) {
     ///////////////////////////////////////////////////////////////////////////////////////
     // Save the output
 
-    //save_image(output, "output.png");
+    save_image(output, "output.png");
 
     // Read in label
     val = label;

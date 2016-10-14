@@ -9,13 +9,16 @@ using namespace cv;
 ///////////////////////////////////////////////////////////////////////////////////////
 // Conversion functions
 
-Mat Image2Mat( Image<float> InImage );
+Mat Image2Mat( Image<float> *InImage );
 
-Image<float> Mat2Image( Mat InMat );
+Image<float> Mat2Image( Mat *InMat );
+
+Func make_Image2Func ( Image<float> *InImage );
 
 ///////////////////////////////////////////////////////////////////////////////////////
 // OpenCV Funcs for camera pipeline
 
+void OpenCV_renoise ( Mat *InMat );
 
 ///////////////////////////////////////////////////////////////////////////////////////
 // Halide Funcs for camera pipeline
@@ -39,3 +42,5 @@ Func make_rbf_biases( Func *in_func,
 
 Func make_transform( Func *in_func, 
                      vector<vector<float>> *TsTw_tran );
+
+Image<float> gaussian_blur(Image<float> in);
