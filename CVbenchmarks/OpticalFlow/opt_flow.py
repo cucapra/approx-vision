@@ -124,6 +124,8 @@ def makecolorwheel():
 
 
 files = ['Dimetrodon','Grove2','Grove3','Hydrangea','RubberWhale','Urban2','Urban3','Venus']
+errors = np.empty([len(files)])
+index = 0
 
 for f in files:
 
@@ -133,14 +135,19 @@ for f in files:
     gt_u, gt_v = flow_read('groundtruth/'+f+'/flow10.flo')
     gt = viz_flow(gt_u,gt_v)
 
-    plt.imshow(gt)
-    plt.show()
-
+    #plt.imshow(gt)
+    #plt.show()
 
     flow = cv2.calcOpticalFlowFarneback(im1,im2, 0.5, 3, 15, 3, 5, 1.2, 0)
     calc_flow = viz_flow(flow[:,:,0],flow[:,:,1])
-    plt.imshow(calc_flow)
-    plt.show()
+    #plt.imshow(calc_flow)
+    #plt.show()
 
-    error = error = ((gt-calc_flow)**2).mean()
+    error = ((gt-calc_flow)**2).mean()
+    errors[index] = error
+    index = index + 1
     print error
+
+mean_error = np.mean(errors, dtype=np.float32)
+print('mean error: '+str(mean_error))
+

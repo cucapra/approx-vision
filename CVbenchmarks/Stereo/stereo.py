@@ -5,6 +5,9 @@ import ipdb
 #ipdb.set_trace()
 paths = ['Aloe','Baby1','Baby2','Baby3','Bowling1','Bowling2','Cloth1','Cloth2','Cloth3','Cloth4','Flowerpots','Lampshade1','Lampshade2','Midd1','Midd2','Monopoly','Plastic','Rocks1','Rocks2','Wood1','Wood2']
 
+errors = np.empty([len(paths)])
+index  = 0
+
 for name in paths:
     pathname = 'data/'+name+'/'
 
@@ -17,7 +20,7 @@ for name in paths:
     true_disp = cv2.imread(pathname+'disp1.png',0)
     
     #parameters for algorithm 
-    # (I used this reference for setting: http://docs.opencv.org/java/2.4.9/org/opencv/calib3d/StereoSGBM.html)
+    # Used this reference: http://docs.opencv.org/java/2.4.9/org/opencv/calib3d/StereoSGBM.html
     window_size = 7
     min_disp = 0
     num_disp = 256 
@@ -27,17 +30,21 @@ for name in paths:
     #Calculate Disparity map from rectified stereo images
     stereo = cv2.StereoSGBM(minDisparity = min_disp, numDisparities = num_disp, SADWindowSize = window_size,P1=P1,P2=P2)
 
-    print('computing disparity...')
+    print('computing disparity for '+name)
     disp = stereo.compute(imgL, imgR).astype(np.float32)
     disp /= 16 #scaling factor noted in the StereoSGBM documentation to perform
     disp = disp.astype(np.uint8) #convert to integers
     
     # plotting results (useful for visualization)
-    f,axarr = plt.subplots(1,2)
-    axarr[0].imshow(disp,vmin=0,vmax=255)
-    axarr[1].imshow(true_disp,vmin=0,vmax=255)
-    plt.show()
+#    f,axarr = plt.subplots(1,2)
+#    axarr[0].imshow(disp,vmin=0,vmax=255)
+#    axarr[1].imshow(true_disp,vmin=0,vmax=255)
+#    plt.show()
     
-    
-    error = error = ((disp-true_disp)**2).mean()
+    error = ((disp-true_disp)**2).mean()
+    errors[index] = error
+    index = index + 1 
     print error
+
+mean_error = np.mean(errors, dtype=np.float32)
+print('mean error: '+str(mean_error))
