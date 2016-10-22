@@ -127,12 +127,15 @@ files = ['Dimetrodon','Grove2','Grove3','Hydrangea','RubberWhale','Urban2','Urba
 errors = np.empty([len(files)])
 index = 0
 
+inputpath = '/home/mbuckler/datasets/middlebury-opt-flow/v0/'
+truthpath = '/home/mbuckler/datasets/middlebury-opt-flow/groundtruth/'
+
 for f in files:
 
-    im1 = cv2.imread('data/'+f+'/frame10.png',0)
-    im2 = cv2.imread('data/'+f+'/frame11.png',0)
+    im1 = cv2.imread(inputpath +f+ '/frame10.png',0)
+    im2 = cv2.imread(inputpath +f+ '/frame11.png',0)
 
-    gt_u, gt_v = flow_read('groundtruth/'+f+'/flow10.flo')
+    gt_u, gt_v = flow_read(truthpath +f+ '/flow10.flo')
     gt = viz_flow(gt_u,gt_v)
 
     #plt.imshow(gt)

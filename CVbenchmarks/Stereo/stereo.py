@@ -9,15 +9,17 @@ errors = np.empty([len(paths)])
 index  = 0
 
 for name in paths:
-    pathname = 'data/'+name+'/'
+    #pathname = 'data/'+name+'/'
+    inputpath = '/home/mbuckler/datasets/middlebury-stereo/v0/'+name+'/'
+    truthpath = '/home/mbuckler/datasets/middlebury-stereo/groundtruth/'+name+'/'
 
     #load images and ground truth
-    imgL = cv2.imread(pathname+'view1.png')
-    imgR = cv2.imread(pathname+'view5.png')
+    imgL = cv2.imread(inputpath+'view1.png')
+    imgR = cv2.imread(inputpath+'view5.png')
     imgL = cv2.cvtColor(imgL, cv2.COLOR_BGR2RGB)
     imgR = cv2.cvtColor(imgR, cv2.COLOR_BGR2RGB)
     
-    true_disp = cv2.imread(pathname+'disp1.png',0)
+    true_disp = cv2.imread(truthpath+'disp1.png',0)
     
     #parameters for algorithm 
     # Used this reference: http://docs.opencv.org/java/2.4.9/org/opencv/calib3d/StereoSGBM.html
