@@ -23,6 +23,8 @@ call(['mkdir',outputpath])
 call('make --directory ./common/ version='+str(version),shell=True)
 
 for image_dir in image_dirs:
+  call(['mkdir',outputpath+image_dir])
+
   in_img0  = inputpath  +image_dir+ '/frame10.png'
   print in_img0
   out_img0 = outputpath +image_dir+ '/frame10.png'
