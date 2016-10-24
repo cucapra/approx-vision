@@ -20,20 +20,25 @@ outputpath  = datasetpath + 'v' +str(version)+'/'
 
 call(['mkdir',outputpath])
 
-call('make --directory ./common/ version='+str(version),shell=True)
+call('make --directory ../common/ version='+str(version),shell=True)
 
 for image_dir in image_dirs:
   call(['mkdir',outputpath+image_dir])
 
+  print "Converting: "+image_dir
+
   in_img0  = inputpath  +image_dir+ '/frame10.png'
-  print in_img0
   out_img0 = outputpath +image_dir+ '/frame10.png'
-  call('./common/pipeline_V'+str(version)+'.o '
+  call('../common/pipeline_V'+str(version)+'.o '
          +in_img0 + ' ' + outputpath, shell=True)
   call("mv "+outputpath+'output.png '+out_img0,shell=True);
 
-  #img1 = inputpath +image_dir+ '/frame11.png'
-  #call(' ./common/pipeline-V'+str(version) 
+  in_img1  = inputpath  +image_dir+ '/frame11.png'
+  out_img1 = outputpath +image_dir+ '/frame11.png'
+  call('../common/pipeline_V'+str(version)+'.o '
+         +in_img1 + ' ' + outputpath, shell=True)
+  call("mv "+outputpath+'output.png '+out_img1,shell=True);
 
-  print in_img0
+
+
 
