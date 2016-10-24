@@ -1,4 +1,4 @@
-:
+
 #include "Halide.h"
 #include "halide_image_io.h"
 #include <opencv2/opencv.hpp>
