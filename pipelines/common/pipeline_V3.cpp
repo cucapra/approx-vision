@@ -91,7 +91,7 @@ int main(int argc, char **argv) {
   // Convert control points to a Halide image
   width  = ctrl_pts[0].size();
   length = ctrl_pts.size();
-  image<float> ctrl_pts_h(width,length);
+  Image<float> ctrl_pts_h(width,length);
   for (int y=0; y<length; y++) {
     for (int x=0; x<width; x++) {
       ctrl_pts_h(x,y) = ctrl_pts[y][x];
