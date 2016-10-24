@@ -2,7 +2,7 @@ import sys
 import os
 import numpy as np
 import cv2
-import ipdb
+#import ipdb
 import matplotlib.pyplot as plt
 
 #############  Utilities for Optical Flow #################################
@@ -127,8 +127,8 @@ files = ['Dimetrodon','Grove2','Grove3','Hydrangea','RubberWhale','Urban2','Urba
 errors = np.empty([len(files)])
 index = 0
 
-inputpath = '/home/mbuckler/datasets/middlebury-opt-flow/v0/'
-truthpath = '/home/mbuckler/datasets/middlebury-opt-flow/groundtruth/'
+inputpath = '/datasets/middlebury-opt-flow/v1/'
+truthpath = '/datasets/middlebury-opt-flow/groundtruth/'
 
 for f in files:
 
