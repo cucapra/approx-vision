@@ -6,16 +6,17 @@ from os.path import isfile, join
 
 # Run alternative pipelines on the middlebury-opt-flow dataset
 
-if len(sys.argv) < 2:
-  print('Usage: python middlebury-opt-flow <version number>')
+if len(sys.argv) < 3:
+  print('Usage: python middlebury-opt-flow <input_data_vers_number> <converter_version_number>')
   quit()
 
-version = int(sys.argv[1])
+in_version = int(sys.argv[1])
+version    = int(sys.argv[2])
 
 image_dirs = ['Dimetrodon','Grove2','Grove3','Hydrangea','RubberWhale','Urban2','Urban3','Venus']
 
 datasetpath = '/datasets/middlebury-opt-flow/'
-inputpath   = datasetpath + 'v0/'
+inputpath   = datasetpath + 'v' + str(in_verson) + '/'
 outputpath  = datasetpath + 'v' +str(version)+'/'
 
 call(['mkdir',outputpath])

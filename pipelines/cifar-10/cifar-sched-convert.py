@@ -5,15 +5,17 @@ import sys
 from os import listdir
 from os.path import isfile, join
 
-if (len(sys.argv) < 2):
-  print("Error: Too few arguments. Did you remember to give a pipeline version number?")
+if (len(sys.argv) < 3):
+  print("Usage: \n python cifar-sched-convert.py "+
+    "<input_pipe_vers_#> <convert_with_pipe_vers_#>")
   exit()
 
 # Version of pipeline to run
-version       = sys.argv[1]
+in_version    = sys.argv[1]
+version       = sys.argv[2]
 
 # Directory with virgin cifar data files
-data_in_dir   = '/datasets/cifar-10/v0/'
+data_in_dir   = '/datasets/cifar-10/v'+str(in_version)+'/'
 
 # Directory to put the converted files
 data_out_dir  = '/datasets/cifar-10/v'+str(version)+'/'
