@@ -31,9 +31,13 @@ Func make_scale( Image<uint8_t> *in_img );
 
 Func make_descale( Func *in_func );
 
+Func make_requant( Image<uint8_t> *in_img, int num_bits );
+
 Func make_rev_tone_map( Func *in_func, Image<float> *rev_tone_h );
 
 Func make_tone_map( Func *in_func, Image<float> *rev_tone_h );
+
+Func make_pwl_tone_map( Func *in_func );
 
 Func make_rbf_ctrl_pts( Func *in_func,
                         int num_ctrl_pts,
