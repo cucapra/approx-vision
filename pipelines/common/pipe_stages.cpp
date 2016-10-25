@@ -289,6 +289,17 @@ Func make_descale( Func *in_func ) {
   return descale;
 }
 
+Func make_requant( Image<uint8_t> *in_img, int num_bits ) {
+  Var x, y, c;
+  int scale_val = pow(2,(8-num_bits));
+
+  Func requant("requant");
+    Expr right_shift = (*in_img)(x,y,c) / scale_val;
+    requant(x,y,c)   = right_shift * scale_val;
+
+  return requant;
+}
+
 Func make_rev_tone_map( Func *in_func, 
                        Image<float> *rev_tone_h ) {
   Var x, y, c;
@@ -313,6 +324,19 @@ Func make_tone_map( Func *in_func,
     tone_map(x,y,c) = (argmin( abs( (*rev_tone_h)(c,idx2) 
                                  - (*in_func)(x,y,c) ) )[0])/256.0f;
   return tone_map;
+}
+
+Func make_pwl_tone_map( Func *in_func ) {
+  Var x, y, c;  
+
+  // Approximate forward tone mapping
+  Func pwl_tone_map("approx-tonemap");
+       pwl_tone_map(x,y,c) = max( min( select(
+              (*in_func)(x,y,c) < 32,  (*in_func)(x,y,c) * 4,
+              (*in_func)(x,y,c) < 128, (*in_func)(x,y,c) + 96,
+                                       (*in_func)(x,y,c)/4 + 192)
+                                          , 255), 0);
+  return pwl_tone_map;
 }
 
 Func make_rbf_ctrl_pts( Func *in_func, 
