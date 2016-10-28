@@ -1,3 +1,5 @@
+import sys
+import os
 import numpy as np
 import cv2
 from matplotlib import pyplot as plt
@@ -8,18 +10,28 @@ paths = ['Aloe','Baby1','Baby2','Baby3','Bowling1','Bowling2','Cloth1','Cloth2',
 errors = np.empty([len(paths)])
 index  = 0
 
+if len(sys.argv) < 2:
+  print('Usage:\n python stereo.py <input_data_vers_number>')
+  quit()
+
+in_version = int(sys.argv[1])
+
+inputpath = '/datasets/middlebury-stereo/v'+str(in_version)+'/'
+truthpath = '/datasets/middlebury-stereo/groundtruth/'
+
+
 for name in paths:
     #pathname = 'data/'+name+'/'
-    inputpath = '/home/mbuckler/datasets/middlebury-stereo/v0/'+name+'/'
-    truthpath = '/home/mbuckler/datasets/middlebury-stereo/groundtruth/'+name+'/'
+    input_img_path = inputpath+name+'/'
+    truth_img_path = truthpath+name+'/'
 
     #load images and ground truth
-    imgL = cv2.imread(inputpath+'view1.png')
-    imgR = cv2.imread(inputpath+'view5.png')
+    imgL = cv2.imread(input_img_path+'view1.png')
+    imgR = cv2.imread(input_img_path+'view5.png')
     imgL = cv2.cvtColor(imgL, cv2.COLOR_BGR2RGB)
     imgR = cv2.cvtColor(imgR, cv2.COLOR_BGR2RGB)
     
-    true_disp = cv2.imread(truthpath+'disp1.png',0)
+    true_disp = cv2.imread(truth_img_path+'disp1.png',0)
     
     #parameters for algorithm 
     # Used this reference: http://docs.opencv.org/java/2.4.9/org/opencv/calib3d/StereoSGBM.html

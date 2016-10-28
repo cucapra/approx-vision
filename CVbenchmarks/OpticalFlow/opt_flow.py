@@ -127,7 +127,13 @@ files = ['Dimetrodon','Grove2','Grove3','Hydrangea','RubberWhale','Urban2','Urba
 errors = np.empty([len(files)])
 index = 0
 
-inputpath = '/datasets/middlebury-opt-flow/v1/'
+if len(sys.argv) < 2:
+  print('Usage:\n python opt-flow.py <input_data_vers_number>')
+  quit()
+
+in_version = int(sys.argv[1])
+
+inputpath = '/datasets/middlebury-opt-flow/v'+str(in_version)+'/'
 truthpath = '/datasets/middlebury-opt-flow/groundtruth/'
 
 for f in files:

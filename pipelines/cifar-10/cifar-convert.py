@@ -39,8 +39,15 @@ subprocess.call(["make",('version='+str(version))])
 
 # For each batch
 for x in range(0,6):
-  # Start a script to process a batch of the images
-  pid = subprocess.Popen(["./pipeline_V"+str(version)+'.o',
+  if x != 5:
+    # Start a script to process a batch of the images
+    pid = subprocess.Popen(["./pipeline_V"+str(version)+'.o',
                           data_in_dir+data_names[x],
                           data_out_dir+data_names[x],
                          ])
+  # If the last batch is being scheduled, don't put it in the background
+  if x == 5:
+    subprocess.call("./pipeline_V"+str(version)+'.o '+
+                          data_in_dir+data_names[x]+' '+
+                          data_out_dir+data_names[x], shell=True)
+

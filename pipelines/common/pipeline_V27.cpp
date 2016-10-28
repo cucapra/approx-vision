@@ -21,6 +21,8 @@
 
 int main(int argc, char **argv) {
 
+  int num_bits = 1;
+
   using namespace std;
 
   // Inform user of usage method
@@ -93,24 +95,7 @@ int main(int argc, char **argv) {
   // Convert control points to a Halide image
   width  = ctrl_pts[0].size();
   length = ctrl_pts.size();
-  Image<float> ctrl_pts_h(width    ///////////////////////////////////////////////////////////////////////////////////////
-    // Camera pipeline
-
-    int width  = input.width();
-    int height = input.height();
-
-    // No scaling here since performing requantization in 8 bit space
-    
-    // Requantize
-    Func requant = make_requant( &input, num_bits );
-
-   
-    ///////////////////////////////////////////////////////////////////////////////////////
-    // Scheduling
-
-    // Use JIT compiler
-    requant.compile_jit();
-    Image<uint8_t> output = requant.realize(width,height,3);    ,length);
+  Image<float> ctrl_pts_h(width,length);
   for (int y=0; y<length; y++) {
     for (int x=0; x<width; x++) {
       ctrl_pts_h(x,y) = ctrl_pts[y][x];
@@ -147,7 +132,7 @@ int main(int argc, char **argv) {
     ///////////////////////////////////////////////////////////////////////////////////////
     // Camera pipeline
 
-    int width  = input.width();
+    width  = input.width();
     int height = input.height();
 
     // No scaling here since performing requantization in 8 bit space
@@ -161,7 +146,7 @@ int main(int argc, char **argv) {
 
     // Use JIT compiler
     requant.compile_jit();
-    Image<uint8_t> output = requant.realize(width,height,3);    
+    Image<uint8_t> output = requant.realize(width,height,3); 
 
   ////////////////////////////////////////////////////////////////////////
   // Save the output

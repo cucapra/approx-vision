@@ -128,7 +128,7 @@ int main(int argc, char **argv) {
     ///////////////////////////////////////////////////////////////////////////////////////
     // Camera pipeline
 
-    int width  = input.width();
+    width  = input.width();
     int height = input.height();
 
     // Scale to 0-1 range and represent in floating point

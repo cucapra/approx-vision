@@ -22,6 +22,8 @@
 
 int main(int argc, char **argv) {
 
+  int num_bits = 7;
+
   using namespace std;
 
   // Inform user of usage method
@@ -131,7 +133,7 @@ int main(int argc, char **argv) {
     ///////////////////////////////////////////////////////////////////////////////////////
     // Camera pipeline
 
-    int width  = input.width();
+    width  = input.width();
     int height = input.height();
 
     // No scaling here since performing requantization in 8 bit space
