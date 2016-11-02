@@ -24,15 +24,23 @@ outputpath  = datasetpath + 'v' + str(version)+     '/'
 
 call(['mkdir',outputpath])
 
-call('make --directory ../common/ version='+str(version),shell=True)
+#########################call('make --directory ../common/ version='+str(version),shell=True)
 
 for image_dir in image_dirs:
- 
+
   output_image_path = outputpath + image_dir + '/images/'
   input_image_path  = inputpath  + image_dir + '/images/'
 
   call(['mkdir',outputpath+image_dir])
   call(['mkdir',output_image_path])
+
+  # Copy over the camera details
+  call(['cp','-rf',
+    inputpath  + image_dir + '/gt_dense_cameras',
+    outputpath + image_dir + '/gt_dense_cameras'])
+  call(['cp',
+    input_image_path  + '/K.txt',
+    output_image_path + '/K.txt'])
 
   # Get list of files in directory
   file_list = [f for f in listdir(input_image_path) 
