@@ -25,7 +25,7 @@ call(['mkdir',outputpath])
 
 call('make --directory ../common/ version='+str(version),shell=True)
 
-meta_directories = ['Annotations', 'ImageSets', 'SegmentationClass', 'SegmentationObjects']
+meta_directories = ['Annotations', 'ImageSets', 'SegmentationClass', 'SegmentationObject']
 
 for meta_directory in meta_directories:
   # Copy over the metadata
