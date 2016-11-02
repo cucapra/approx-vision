@@ -23,6 +23,8 @@ outputpath  = datasetpath + 'v' + str(version)+     '/'
 
 call(['mkdir',outputpath])
 
+call('make --directory ../common/ version='+str(version),shell=True)
+
 meta_directories = ['Annotations', 'ImageSets', 'SegmentationClass', 'SegmentationObjects']
 
 for meta_directory in meta_directories:
