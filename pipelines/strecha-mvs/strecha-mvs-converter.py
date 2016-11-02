@@ -24,7 +24,7 @@ outputpath  = datasetpath + 'v' + str(version)+     '/'
 
 call(['mkdir',outputpath])
 
-#########################call('make --directory ../common/ version='+str(version),shell=True)
+call('make --directory ../common/ version='+str(version),shell=True)
 
 for image_dir in image_dirs:
 
