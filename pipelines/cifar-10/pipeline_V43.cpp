@@ -191,8 +191,6 @@ int main(int argc, char **argv) {
 
     Image<float> opencv_out = Mat2Image(&opencv_in_mat);
 
-    Image<float> opencv_out = Mat2Image(&opencv_in_mat);
-
     // Repeat edges as we will be demosaicing
     Func clamped("clamped");
     clamped = BoundaryConditions::repeat_edge(opencv_out);
