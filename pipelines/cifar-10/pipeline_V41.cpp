@@ -193,7 +193,7 @@ int main(int argc, char **argv) {
 
     // Repeat edges as we will be demosaicing
     Func clamped("clamped");
-    clamped = BoundaryConditions::repeat_edge(openvc_out);
+    clamped = BoundaryConditions::repeat_edge(opencv_out);
 
     Func demosaic           = make_demosaic_subsample ( &clamped );
 
