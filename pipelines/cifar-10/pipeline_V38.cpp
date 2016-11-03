@@ -167,8 +167,12 @@ int main(int argc, char **argv) {
     // Scale to 0-1 range and represent in floating point
     Func scale              = make_scale        ( &input);
 
-    // Backward pipeline
-    Func demosaic           = make_demosaic_subsample ( &scale );
+    // Repeat edges as we will be demosaicing
+    Image<float> scaled     = scale.realize(width,height,3);
+    Func clamped("clamped");
+    clamped = BoundaryConditions::repeat_edge(scaled);
+
+    Func demosaic           = make_demosaic_subsample ( &clamped );
 
     // Scale back to 0-255 and represent in 8 bit fixed point
     Func descale            = make_descale      ( &demosaic );

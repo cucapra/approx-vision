@@ -191,9 +191,11 @@ int main(int argc, char **argv) {
 
     Image<float> opencv_out = Mat2Image(&opencv_in_mat);
 
-    Func Image2Func         = make_Image2Func   ( &opencv_out );
+    // Repeat edges as we will be demosaicing
+    Func clamped("clamped");
+    clamped = BoundaryConditions::repeat_edge(openvc_out);
 
-    Func demosaic           = make_demosaic_subsample ( &Image2Func );
+    Func demosaic           = make_demosaic_subsample ( &clamped );
 
     Func tone_map           = make_tone_map     ( &demosaic,
                                                   &rev_tone_h );
