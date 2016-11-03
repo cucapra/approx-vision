@@ -159,69 +159,14 @@ void OpenCV_gaussian_blur ( Mat *InMat ) {
 
 }
 
-
-
-/*
-void OpenCV_renoise ( Mat *InMat ) {
-
-  vector<Mat> three_channels;
-  cv::split((*InMat), three_channels);
-
-  // Define the random number generator
-  cv::RNG rng(0xDEADEEEF);
-
-  // Noise parameters
-  // noised_pixel = unnoised_pixel + 
-  //                  gaussian_rand( std_dev = q * sqrt(unnoised_pixel - p) )
-  // q and p values do not vary between channels
-
-//  float q = 0.0060;
-  float q = 0.060;
-
-  float p = 0.0500;
-  float red_std, green_std, blue_std;
-
-  for (int y=0; y<(*InMat).rows; y++) {
-    for (int x=0; x<(*InMat).cols; x++) {
-      // Compute the channel noise standard deviation
-      red_std   = q * sqrt(
-        (three_channels[2].at<float>(y,x)) - p );
-      green_std = q * sqrt(
-        (three_channels[1].at<float>(y,x)) - p );
-      blue_std  = q * sqrt(
-        (three_channels[0].at<float>(y,x)) - p );
-
-      // NOTE: OpenCV stores in BGR order (not RGB)
-      // Blue channel
-      three_channels[0].at<float>(y,x) = 
-        enforce_range (
-        three_channels[0].at<float>(y,x) +
-        (rng.gaussian(blue_std)));
-      // Green channel
-      three_channels[1].at<float>(y,x) = 
-        enforce_range(
-        three_channels[1].at<float>(y,x) +
-        (rng.gaussian(green_std)));
-      // Red channel
-      three_channels[2].at<float>(y,x) = 
-        enforce_range(
-        three_channels[2].at<float>(y,x) +
-        (rng.gaussian(red_std)));
-    }
-  }
-  cv::merge(three_channels, *InMat);
-}
-*/
-
-
 void OpenCV_remosaic (Mat *InMat ) {
 
   vector<Mat> three_channels;
   cv::split((*InMat), three_channels);
 
   // Re-mosaic aka re-bayer the image
-  // G R
   // B G
+  // G R
 
   // Note: OpenCV stores as BGR not RGB
   for (int y=0; y<(*InMat).rows; y++) {
@@ -298,6 +243,139 @@ Func make_requant( Image<uint8_t> *in_img, int num_bits ) {
     requant(x,y,c)   = right_shift * scale_val;
 
   return requant;
+}
+
+Func make_demosaic_subsample( Func *in_func ) {
+
+  Var x, y, c;
+  Func demosaic_subsample("demosaic_subsample");
+
+  // B G
+  // G R
+
+  demosaic_subsample(x,y,c) = 
+    select(
+      // Bottom green
+      y%2==0 && x%2==0,
+        select(
+          c==0, (*in_func)(x+1,y,c),  //Red
+          c==1, (*in_func)(x,y,c)*2,  //Green
+                (*in_func)(x,y+1,c)), //Blue
+      // Red
+      y%2==0 && x%2==1,
+        select(
+          c==0, (*in_func)(x,y,c),                       //Red
+          c==1, (*in_func)(x,y+1,c)+(*in_func)(x-1,y,c), //Green
+                (*in_func)(x-1,y+1,c)),                  //Blue
+      // Blue
+      y%2==1 && x%2==0,
+        select(
+          c==0, (*in_func)(x+1,y-1,c),                   //Red
+          c==1, (*in_func)(x,y+1,c)+(*in_func)(x-1,y,c), //Green
+                (*in_func)(x,y,c)),                      //Blue
+      // Top green
+        select(
+          c==0, (*in_func)(x,y-1,c), //Red
+          c==1, (*in_func)(x,y,c)*2, //Green
+                (*in_func)(x-1,y,c)) //Blue
+    );
+
+  return demosaic_subsample;
+}
+
+Func make_demosaic_nn( Func *in_func ) {
+
+  // Nearest neighbor demosaicing
+  Var x, y, c;
+  Func demosaic_nn("demosaic_nn");
+
+  // B G
+  // G R
+
+  demosaic_nn(x,y,c) = 
+    select(
+      // Bottom green
+      y%2==0 && x%2==0,
+        select(
+          c==0, (*in_func)(x+1,y,c),  //Red
+          c==1, (*in_func)(x,y,c)*2,  //Green
+                (*in_func)(x,y+1,c)), //Blue
+      // Red
+      y%2==0 && x%2==1,
+        select(
+          c==0, (*in_func)(x,y,c),     //Red
+          c==1, (*in_func)(x-1,y,c)*2, //Green
+                (*in_func)(x-1,y+1,c)),//Blue
+      // Blue
+      y%2==1 && x%2==0,
+        select(
+          c==0, (*in_func)(x+1,y-1,c), //Red
+          c==1, (*in_func)(x-1,y,c)*2, //Green
+                (*in_func)(x,y,c)),    //Blue
+      // Top green
+        select(
+          c==0, (*in_func)(x,y-1,c), //Red
+          c==1, (*in_func)(x,y,c)*2, //Green
+                (*in_func)(x-1,y,c)) //Blue
+    );
+
+  return demosaic_nn;
+}
+
+Func make_demosaic_interp( Func *in_func ) {
+
+  // Interpolation demosaicing
+  Var x, y, c;
+  Func demosaic_interp("demosaic_interp");
+
+  // B G
+  // G R
+
+  demosaic_interp(x,y,c) = 
+    select(
+      // Bottom green
+      y%2==0 && x%2==0,
+         select(
+          c==0, ((*in_func)(x-1,y,c) + 
+                 (*in_func)(x+1,y,c))/2 , //Red
+          c==1, (*in_func)(x,y,c)*2, //Green
+                ((*in_func)(x,y-1,c) + 
+                 (*in_func)(x,y+1,c))/2 ),//Blue
+      // Red
+      y%2==0 && x%2==1,
+        select(
+          c==0, (*in_func)(x,y,c),     //Red
+          c==1, ((*in_func)(x+1,y,c) + 
+                 (*in_func)(x-1,y,c) +
+                 (*in_func)(x,y+1,c) +
+                 (*in_func)(x,y-1,c))/2 , //Green
+                ((*in_func)(x+1,y-1,c) + 
+                 (*in_func)(x-1,y+1,c) +
+                 (*in_func)(x+1,y+1,c) +
+                 (*in_func)(x-1,y-1,c))/4 ),//Blue
+      // Blue
+      y%2==1 && x%2==0,
+        select(
+          c==0, ((*in_func)(x+1,y-1,c) + 
+                 (*in_func)(x-1,y+1,c) +
+                 (*in_func)(x+1,y+1,c) +
+                 (*in_func)(x-1,y-1,c))/4 , //Red
+          c==1, ((*in_func)(x+1,y,c) + 
+                 (*in_func)(x,y+1,c) +
+                 (*in_func)(x-1,y,c) +
+                 (*in_func)(x,y+1,c))/2 , //Green
+                (*in_func)(x,y,c) ),    //Blue
+      // Top Green
+        select(
+          c==0, ((*in_func)(x,y-1,c) + 
+                 (*in_func)(x,y+1,c))/2 , //Red
+          c==1, (*in_func)(x,y,c)*2, //Green
+                ((*in_func)(x-1,y,c) + 
+                 (*in_func)(x+1,y,c))/2 )//Blue
+
+    );
+
+  return demosaic_interp;
 }
 
 Func make_rev_tone_map( Func *in_func, 
@@ -425,20 +503,6 @@ Func make_get_std_dev( Func *in_func ) {
     get_std_dev(x,y,c) = q * sqrt( (*in_func)(x,y,c) - p );
   return get_std_dev;  
 }
-/*
-Func make_renoise( Func *in_func, Func *std_dev ) {
-  Var x, y, c;
-  // Noise parameters
-  // noised_pixel = unnoised_pixel + 
-  //                  gaussian_rand( std_dev = q * sqrt(unnoised_pixel - p) )
-  // q and p values do not vary between channels
-  Func renoise("renoise");
-    renoise(x,y,c) = (*in_func)(x,y,c) + 
-                       get_normal_dist_rand(0,(*std_dev)(x,y,c));  
-  return renoise;
-}
-*/
-
 
 // Note: This gaussian blur function is adapted from Halide CVPR 2015 code
 Image<float> gaussian_blur(Image<float> *in) {
