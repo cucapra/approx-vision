@@ -54,8 +54,6 @@ for image_dir in image_dirs:
     # Create the image name
     in_img_name = file_list[x]
 
-    print 'Converting: '+image_dir+' '+in_img_name
-
     # Convert the jpg to png
     im = Image.open(input_image_path+in_img_name)
     im.save(output_image_path+in_img_name+'_temp.png')
