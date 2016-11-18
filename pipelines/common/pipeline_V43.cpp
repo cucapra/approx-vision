@@ -131,39 +131,46 @@ int main(int argc, char **argv) {
   width  = input.width();
   int height = input.height();
 
-  // Scale to 0-1 range and represent in floating point
-  Func scale              = make_scale        ( &input);
+    // Scale to 0-1 range and represent in floating point
+    Func scale              = make_scale        ( &input);
 
-  // Backward pipeline
-  Func rev_tone_map       = make_rev_tone_map ( &scale,
+    // Backward pipeline
+    Func rev_tone_map       = make_rev_tone_map ( &scale,
                                                   &rev_tone_h );
-  Func rev_gamut_map_ctrl = make_rbf_ctrl_pts ( &rev_tone_map,
-                                                num_ctrl_pts,
-                                                &rev_ctrl_pts_h,
-                                                &rev_weights_h );
-  Func rev_gamut_map_bias = make_rbf_biases   ( &rev_tone_map,
-                                                &rev_gamut_map_ctrl,
-                                                &rev_coefs );
-  Func rev_transform      = make_transform    ( &rev_gamut_map_bias,
-                                                &TsTw_tran_inv );
+    Func rev_gamut_map_ctrl = make_rbf_ctrl_pts ( &rev_tone_map,
+                                                  num_ctrl_pts,
+                                                  &rev_ctrl_pts_h,
+                                                  &rev_weights_h );
+    Func rev_gamut_map_bias = make_rbf_biases   ( &rev_tone_map,
+                                                  &rev_gamut_map_ctrl,
+                                                  &rev_coefs );
+    Func rev_transform      = make_transform    ( &rev_gamut_map_bias,
+                                                  &TsTw_tran_inv );
 
-  rev_tone_map.compute_root();
-  rev_gamut_map_ctrl.compute_root();
+    rev_tone_map.compute_root();
+    rev_gamut_map_ctrl.compute_root();    
 
-  Image<float> opencv_in_image = rev_transform.realize(width, height, 3);
+    Image<float> opencv_in_image = rev_transform.realize(width, height, 3);
 
-  Mat opencv_in_mat = Image2Mat(&opencv_in_image);
+    Mat opencv_in_mat = Image2Mat(&opencv_in_image);
 
-  OpenCV_renoise(&opencv_in_mat);
+    OpenCV_renoise(&opencv_in_mat);
 
-  OpenCV_remosaic(&opencv_in_mat);
+    OpenCV_remosaic(&opencv_in_mat);
 
-  Image<float> opencv_out = Mat2Image(&opencv_in_mat);
+    Image<float> opencv_out = Mat2Image(&opencv_in_mat);
 
-  Func Image2Func         = make_Image2Func   ( &opencv_out );
+    // Repeat edges as we will be demosaicing
+    Func clamped("clamped");
+    clamped = BoundaryConditions::repeat_edge(opencv_out);
 
-  // Scale back to 0-255 and represent in 8 bit fixed point
-  Func descale            = make_descale      ( &Image2Func );
+    Func demosaic           = make_demosaic_interp ( &clamped );
+
+    Func tone_map           = make_tone_map     ( &demosaic,
+                                                  &rev_tone_h );
+
+    // Scale back to 0-255 and represent in 8 bit fixed point
+    Func descale            = make_descale      ( &tone_map );
 
 
   ///////////////////////////////////////////////////////////////////////////////////////
