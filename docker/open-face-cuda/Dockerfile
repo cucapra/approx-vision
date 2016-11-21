@@ -137,7 +137,8 @@ RUN luarocks install graphicsmagick
 
 # Install OpenFace
 WORKDIR /root
-RUN git clone https://github.com/cmusatyalab/openface.git --recursive
+RUN apt-get install vim
+RUN git clone --recursive https://github.com/cmusatyalab/openface.git
 RUN cd ~/openface && \
     ./models/get-models.sh && \
     pip2 install -r requirements.txt && \
