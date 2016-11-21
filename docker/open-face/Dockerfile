@@ -88,9 +88,9 @@ RUN luarocks install tds
 RUN cd ~ && \
     mkdir -p ocv-tmp && \
     cd ocv-tmp && \
-    curl -L https://github.com/Itseez/opencv/archive/3.1.0.zip -o ocv.zip && \
+    curl -L https://github.com/Itseez/opencv/archive/2.4.11.zip -o ocv.zip && \
     unzip ocv.zip && \
-    cd opencv-3.1.0 && \
+    cd opencv-2.4.11 && \
     mkdir release && \
     cd release && \
     cmake -D CMAKE_BUILD_TYPE=RELEASE \
@@ -131,14 +131,17 @@ RUN apt-get install python-pandas -y
 RUN apt-get install python-protobuf -y 
 RUN apt-get install zip -y 
 RUN apt-get install wget -y 
-RUN apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+RUN apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* 
+
+RUN luarocks install graphicsmagick
 
 # Install OpenFace
 WORKDIR /root
-RUN git clone https://github.com/cmusatyalab/openface.git
+RUN git clone https://github.com/cmusatyalab/openface.git --recursive
 RUN cd ~/openface && \
     ./models/get-models.sh && \
     pip2 install -r requirements.txt && \
     python2 setup.py install && \
     pip2 install -r demos/web/requirements.txt && \
     pip2 install -r training/requirements.txt
+
