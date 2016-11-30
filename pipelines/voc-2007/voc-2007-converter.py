@@ -92,3 +92,4 @@ while(num_busy_procs != 0):
 
   time.sleep(5)
 
+procs[:] = []
