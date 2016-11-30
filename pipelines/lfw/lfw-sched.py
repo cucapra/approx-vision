@@ -60,16 +60,15 @@ for i,version in enumerate(vers_to_run):
     start_dir_id = start_dir_id + dirs_per_thread
     end_dir_id   = end_dir_id   + dirs_per_thread
 
-  # Initialize the number of busy procs
-  num_busy_procs = num_threads
+  proc_states = [True] * num_threads
 
   # Check every minute to see if all threads have finished
-  while(num_busy_procs != 0):
-    ls = [psutil.Process(proc.pid) for proc in procs]
-
-    gone, alive = psutil.wait_procs(ls, timeout=3)
-
-    num_busy_procs = len(alive)
+  while((not any(proc_states)) != True):
+    # Previous check to see if processes have completed
+    proc_states = [os.path.exists("/proc/"+str(proc.pid)) for proc in procs]
 
     time.sleep(5)
+
+  procs[:] = []
+
 

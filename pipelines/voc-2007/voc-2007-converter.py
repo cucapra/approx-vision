@@ -3,6 +3,7 @@ from PIL import Image
 import subprocess
 from subprocess import call
 import sys
+import os
 from os import listdir
 from os.path import isfile, join
 import psutil
@@ -79,16 +80,12 @@ for x in range(0,num_threads):
   start_img_id = start_img_id + imgs_per_thread
   end_img_id   = end_img_id   + imgs_per_thread
 
-# Initialize the number of busy procs
-num_busy_procs = num_threads
+proc_states = [True] * num_threads
 
 # Check every minute to see if all threads have finished
-while(num_busy_procs != 0):
-  ls = [psutil.Process(proc.pid) for proc in procs]
-
-  gone, alive = psutil.wait_procs(ls, timeout=3)
-
-  num_busy_procs = len(alive)
+while((not any(proc_states)) != True):
+  # Previous check to see if processes have completed
+  proc_states = [os.path.exists("/proc/"+str(proc.pid)) for proc in procs]
 
   time.sleep(5)
 
