@@ -64,11 +64,12 @@ for i,version in enumerate(vers_to_run):
   proc_states = [True] * num_threads
 
   # Check every minute to see if all threads have finished
-  while((not any(proc_states)) != True):
+  while(all(proc_states) is not None):
     # Previous check to see if processes have completed
-    proc_states = [os.path.exists("/proc/"+str(proc.pid)) for proc in procs]
+    proc_states = [proc.poll for proc in procs]
 
     time.sleep(5)
+
 
   procs[:] = []
 
