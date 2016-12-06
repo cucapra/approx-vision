@@ -8,6 +8,7 @@ from os import listdir
 from os.path import isfile, join
 import cv2
 import numpy as np
+import struct
 
 # Percentage of data to be allocated to training
 perc_train_data = 80
@@ -78,10 +79,13 @@ for i,bin_file_name in enumerate(bin_file_names):
     out_image = cv2.resize(in_image, dsize=size, fx=0, fy=0,  interpolation=cv2.INTER_AREA) 
 
     # Write the image to output file
-    b,g,r = cv2.split(out_image)
+    b,g,r = cv2.split(out_image.astype(int))
+    b = np.reshape(b,1024)
+    g = np.reshape(g,1024)
+    r = np.reshape(r,1024)
     # Use CIFAR-10 binary format including class label
-    image_data      = [i] + r + g + b
-    data_byte_array = bytearray(image_data)
+    image_data = np.concatenate((np.array([i]),r,g,b))
+    data_byte_array = struct.pack('3073B',*image_data)
     bin_file.write(data_byte_array)
 
     # Increase the class index
@@ -92,6 +96,5 @@ for i,bin_file_name in enumerate(bin_file_names):
       image_index = image_index + 1
       if image_index == index_stop:
         image_index = index_start
-
   # Close the binary file
   bin_file.close()
