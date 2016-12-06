@@ -84,7 +84,7 @@ for i,bin_file_name in enumerate(bin_file_names):
     g = np.reshape(g,1024)
     r = np.reshape(r,1024)
     # Use CIFAR-10 binary format including class label
-    image_data = np.concatenate((np.array([i]),r,g,b))
+    image_data = np.concatenate((np.array([class_index]),r,g,b))
     data_byte_array = struct.pack('3073B',*image_data)
     bin_file.write(data_byte_array)
 
