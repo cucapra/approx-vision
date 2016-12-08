@@ -27,9 +27,8 @@ call(['mkdir',outputpath])
 
 call('make --directory ../common/ version='+str(version),shell=True)
 
-classes = ['airplane']
-#classes = ['airplane','automobile','bird','cat','deer',
-#           'dog','frog','horse','ship','truck']
+classes = ['airplane','automobile','bird','cat','deer',
+           'dog','frog','horse','ship','truck']
    
 for class_ in classes:
 
