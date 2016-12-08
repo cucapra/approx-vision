@@ -1,16 +1,18 @@
+
 from subprocess import call
 import sys
 from os import listdir
 from os.path import isfile, join
 
-# Schedule multiple conversions for cifar-10
+# Schedule multiple conversions for the strecha-mvs dataset
 
-# Version numbers for each version to run
-vers_to_run = [21, 22, 23, 24, 25, 26, 27]
-# Version numbers paired with the input, specifically which versions are input
-in_vers     = [ 2,  2,  2,  2,  2,  2,  2]
+num_threads = 16
 
+vers_to_run = [73,74,75]
+in_vers     = [ 0, 0, 0]
 
 for index in range(0,len(vers_to_run)):
-  call('python cifar-convert.py '+str(in_vers[index])+' '+str(vers_to_run[index]), shell=True)
-
+  call('python cifar-10-hi-res-converter.py '
+         +str(in_vers[index])+' '
+         +str(vers_to_run[index])+' '
+         +str(num_threads), shell=True)
