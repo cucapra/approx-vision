@@ -250,12 +250,12 @@ Func make_demosaic_subsample( Func *in_func ) {
   Var x, y, c;
   Func demosaic_subsample("demosaic_subsample");
 
-  // B G
   // G R
+  // B G
 
   demosaic_subsample(x,y,c) = 
     select(
-      // Bottom green
+      // Top
       y%2==0 && x%2==0,
         select(
           c==0, (*in_func)(x+1,y,c),  //Red
@@ -273,7 +273,7 @@ Func make_demosaic_subsample( Func *in_func ) {
           c==0, (*in_func)(x+1,y-1,c),                   //Red
           c==1, (*in_func)(x,y+1,c)+(*in_func)(x-1,y,c), //Green
                 (*in_func)(x,y,c)),                      //Blue
-      // Top green
+      // Bottom green
         select(
           c==0, (*in_func)(x,y-1,c), //Red
           c==1, (*in_func)(x,y,c)*2, //Green
@@ -289,12 +289,12 @@ Func make_demosaic_nn( Func *in_func ) {
   Var x, y, c;
   Func demosaic_nn("demosaic_nn");
 
-  // B G
   // G R
+  // B G
 
   demosaic_nn(x,y,c) = 
     select(
-      // Bottom green
+      // Top green
       y%2==0 && x%2==0,
         select(
           c==0, (*in_func)(x+1,y,c),  //Red
@@ -328,12 +328,12 @@ Func make_demosaic_interp( Func *in_func ) {
   Var x, y, c;
   Func demosaic_interp("demosaic_interp");
 
-  // B G
   // G R
+  // B G
 
   demosaic_interp(x,y,c) = 
     select(
-      // Bottom green
+      // Top green
       y%2==0 && x%2==0,
          select(
           c==0, ((*in_func)(x-1,y,c) + 
@@ -365,7 +365,7 @@ Func make_demosaic_interp( Func *in_func ) {
                  (*in_func)(x-1,y,c) +
                  (*in_func)(x,y+1,c))/2 , //Green
                 (*in_func)(x,y,c) ),    //Blue
-      // Top Green
+      // Bottom Green
         select(
           c==0, ((*in_func)(x,y-1,c) + 
                  (*in_func)(x,y+1,c))/2 , //Red
@@ -376,6 +376,20 @@ Func make_demosaic_interp( Func *in_func ) {
     );
 
   return demosaic_interp;
+}
+
+Func make_qrtr_res_binning( Func *in_func ) {
+
+  Var x, y, c;
+
+  Func qrtr_res_binning("qrtr_res_binning");
+
+  qrtr_res_binning(x,y,c) = ( (*in_func)( x*2   ,(y*2)+1,c) +
+                              (*in_func)((x*2)+1, y*2   ,c) +
+                              (*in_func)( x*2   , y*2   ,c) +
+                              (*in_func)((x*2)+1,(y*2)+1,c) ) / 4;
+
+  return qrtr_res_binning;
 }
 
 Func make_rev_tone_map( Func *in_func, 

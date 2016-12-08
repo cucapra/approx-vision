@@ -39,6 +39,8 @@ Func make_demosaic_nn( Func *in_func );
 
 Func make_demosaic_interp( Func *in_func );
 
+Func make_qrtr_res_binning( Func *in_func );
+
 Func make_rev_tone_map( Func *in_func, Image<float> *rev_tone_h );
 
 Func make_tone_map( Func *in_func, Image<float> *rev_tone_h );
