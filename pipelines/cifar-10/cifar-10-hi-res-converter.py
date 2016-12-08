@@ -33,8 +33,8 @@ classes = ['airplane','automobile','bird','cat','deer',
    
 for class_ in classes:
 
-  out_img_dir = outputpath + '/' + class_
-  in_img_dir  = inputpath  + '/' + class_
+  out_img_dir = outputpath + '/' + class_ + '/'
+  in_img_dir  = inputpath  + '/' + class_ + '/'
 
   call(['mkdir',out_img_dir])
 
