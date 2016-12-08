@@ -184,7 +184,7 @@ int main(int argc, char **argv) {
 
   // Use JIT compiler
   descale.compile_jit();
-  Image<uint8_t> output = descale.realize(width/2,height/2,3);
+  Image<uint8_t> output = descale.realize(width/8,height/8,3);
 
   ////////////////////////////////////////////////////////////////////////
   // Save the output
