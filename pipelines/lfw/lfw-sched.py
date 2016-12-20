@@ -9,7 +9,7 @@ from os.path import isfile, join
 import psutil
 import time
 
-num_threads = 2
+num_threads = 14
 datasetpath = '/datasets/lfw/'
 
 vers_to_run = [ 1, 2]
@@ -22,6 +22,9 @@ for i,version in enumerate(vers_to_run):
 
   inputpath   = datasetpath + 'v' + str(in_vers[i]) + '/'
   outputpath  = datasetpath + 'v' + str(version)+     '/'
+
+  # Remove the cache from the input in case it's there
+  subprocess.call(['rm','-rf',inputpath+'cache.t7'])
 
   # Make the directory for this section  
   subprocess.call(['mkdir',outputpath])
@@ -61,15 +64,13 @@ for i,version in enumerate(vers_to_run):
     start_dir_id = start_dir_id + dirs_per_thread
     end_dir_id   = end_dir_id   + dirs_per_thread
 
-  proc_states = [True] * num_threads
+  proc_states = [proc.poll() for proc in procs]
 
   # Check every minute to see if all threads have finished
-  while(all(proc_states) is not None):
+  while(all(proc_state == None for proc_state in proc_states)):
     # Previous check to see if processes have completed
-    proc_states = [proc.poll for proc in procs]
-
+    proc_states = [proc.poll() for proc in procs]
     time.sleep(5)
-
 
   procs[:] = []
 
