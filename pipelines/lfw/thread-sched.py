@@ -26,8 +26,8 @@ for x in range(start_dir_id,end_dir_id+1):
   call(['mkdir',outputpath])
 
   # Get list of files in directory
-  file_list = [f for f in listdir(inputpath) if f.endswith('.jpg')
-    and isfile(join(inputpath, f))]
+  file_list = [f for f in listdir(inputpath)
+                 if isfile(join(inputpath, f))]
   file_list.sort()
 
   # Number of images in the directory
