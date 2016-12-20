@@ -9,11 +9,11 @@ from os.path import isfile, join
 import psutil
 import time
 
-num_threads = 2
+num_threads = 12
 datasetpath = '/datasets/casia/'
 
-vers_to_run = [ 1, 2]
-in_vers     = [ 0, 0]
+vers_to_run = [ 2, 3, 4, 5, 6, 7, 8, 9,10,11,12,13]
+in_vers     = [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 
 for i,version in enumerate(vers_to_run):
 
@@ -61,15 +61,15 @@ for i,version in enumerate(vers_to_run):
     start_dir_id = start_dir_id + dirs_per_thread
     end_dir_id   = end_dir_id   + dirs_per_thread
 
-  proc_states = [True] * num_threads
+
+  proc_states = [proc.poll() for proc in procs]
 
   # Check every minute to see if all threads have finished
-  while(all(proc_states) is not None):
+  while( all(proc_state == None for proc_state in proc_states)):
     # Previous check to see if processes have completed
-    proc_states = [proc.poll for proc in procs]
+    proc_states = [proc.poll() for proc in procs]
 
     time.sleep(5)
-
 
   procs[:] = []
 
