@@ -14,7 +14,7 @@ RUN pip install numpy easydict
 RUN apt-get install cmake cython python-opencv -y
 
 # Clone Faster RCNN
-RUN apt-get install git
+RUN apt-get install git 
 RUN git clone --recursive https://github.com/rbgirshick/py-faster-rcnn.git
 
 WORKDIR /root/py-faster-rcnn
@@ -29,3 +29,17 @@ WORKDIR /root/py-faster-rcnn/caffe-fast-rcnn/build
 RUN cmake ..
 RUN make -j4 && make pycaffe
 
+# Remaining dependency 
+RUN apt-get install python-tk -y
+
+# Solve the lib1394 issue
+RUN ln /dev/null /dev/raw1394
+
+WORKDIR /root/py-faster-rcnn/
+
+# Get the model files
+RUN ./data/scripts/fetch_faster_rcnn_models.sh
+RUN ./data/scripts/fetch_imagenet_models.sh
+
+# Make the directory for our data
+RUN mkdir data/VOCdevkit2007
