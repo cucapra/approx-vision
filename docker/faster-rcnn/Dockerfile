@@ -15,7 +15,7 @@ RUN apt-get install cmake cython python-opencv -y
 
 # Clone Faster RCNN
 RUN apt-get install git 
-RUN git clone --recursive https://github.com/rbgirshick/py-faster-rcnn.git
+RUN git clone --recursive https://github.com/mbuckler/py-faster-rcnn.git
 
 WORKDIR /root/py-faster-rcnn
 
