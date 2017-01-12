@@ -4,6 +4,8 @@ import subprocess
 import sys
 from os import listdir
 from os.path import isfile, join
+import psutil
+import time
 
 vers_to_run = [ 1, 2, 6,13,41,65,67,69,71]
 in_vers     = [ 0, 0, 0, 0, 0,13,13,13,13]
@@ -19,13 +21,13 @@ for i, version in enumerate(vers_to_run):
 
   # Copy all but the JPEG images
   subprocess.call('rsync -av '+
-                   datasetpath+'/v'+str(in_version)+' '+
+                   datasetpath+'/v'+str(in_version)+'/ '+
                    datasetpath+'/v'+str(version)+' '+
                    '--exclude VOC2007/JPEGImages',
                    shell=True)
 
-  in_img_dir  = datasetpath+'v'+str(in_version)+'/VOC2007/JPEGImages'
-  out_img_dir = datasetpath+'v'+str(version)+'/VOC2007/JPEGImages'
+  in_img_dir  = datasetpath+'v'+str(in_version)+'/VOC2007/JPEGImages/'
+  out_img_dir = datasetpath+'v'+str(version)+'/VOC2007/JPEGImages/'
 
   # Make the directory for this section  
   subprocess.call('mkdir '+out_img_dir,shell=True)
@@ -44,11 +46,12 @@ for i, version in enumerate(vers_to_run):
   end_img_id   = start_img_id + imgs_per_thread - 1
 
   # Establish empty set of processes
+  procs = []
 
   # For every split
   for x in range(0,num_threads):
     # Provide a temporary folder for this script
-    subprocess.call(['mkdir',in_img_dir+'temp'+str(x)])
+    subprocess.call(['mkdir',in_img_dir+'/temp'+str(x)])
 
     # In case the number of images is not a multiple of the number of threads
     if (num_imgs-start_img_id <= 2*imgs_per_thread):
