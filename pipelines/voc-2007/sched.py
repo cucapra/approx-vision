@@ -7,8 +7,8 @@ from os.path import isfile, join
 import psutil
 import time
 
-vers_to_run = [ 1, 2, 6,13,41,65,67,69,71]
-in_vers     = [ 0, 0, 0, 0, 0,13,13,13,13]
+vers_to_run = [42,43,66,68,70]
+in_vers     = [ 0, 0,13,13,13]
 
 num_threads = 12
 
@@ -18,6 +18,8 @@ datasetpath   = '/datasets/voc-2007/'
 for i, version in enumerate(vers_to_run):
 
   in_version = in_vers[i]
+
+  call('make --directory ../common/ version='+str(version),shell=True) 
 
   # Copy all but the JPEG images
   subprocess.call('rsync -av '+
@@ -78,5 +80,10 @@ for i, version in enumerate(vers_to_run):
     # Previous check to see if processes have completed
     proc_states = [proc.poll() for proc in procs]
     time.sleep(5)
+
+  # For every split remove the temporary directories
+  for x in range(0,num_threads):
+    # Provide a temporary folder for this script
+    subprocess.call(['rm -rf',in_img_dir+'/temp'+str(x)])
     
   procs[:] = []
