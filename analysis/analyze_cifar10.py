@@ -3,6 +3,7 @@
 import matplotlib.pyplot as plt
 import sys
 import numpy as np
+from numpy import sqrt, pi, exp, linspace
 
 # Only argument is path to cifar-10 data file
 filename = sys.argv[1]
@@ -47,6 +48,41 @@ plt.subplot(313)
 plt.bar(range(0,256),histogram_b,width=0.5,color='b')
 plt.axis([0,255,0,1])
 
+
+#plt.show()
+
+def gaussian(x, amp, cen, wid):
+    return amp * exp(-(x-cen)**2 / wid)
+
+from scipy.optimize import curve_fit
+
+init_vals = [0.8, 125, 50]
+
+best_vals, covar = curve_fit(gaussian, range(0,256), histogram_g,
+        p0=init_vals)
+
+print best_vals
+
+print len(range(0,256))
+print len((gaussian(x,best_vals[0],best_vals[1],best_vals[2])            
+            for x in range(0,256)))
+
+r_gauss = []
+g_gauss = []
+b_gauss = []
+for intensity in range(0,256):
+    r_gauss = 
+
+
+'''
+plt.figure(2)
+plt.plot((range(0,256)), \
+         (gaussian(x,best_vals[0],best_vals[1],best_vals[2]) \
+         for x in range(0,256)) )
 plt.show()
+'''
+
+
+
 
 
