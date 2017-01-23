@@ -12,9 +12,10 @@ filename = sys.argv[1]
 histogram_r = np.zeros(256)
 histogram_g = np.zeros(256)
 histogram_b = np.zeros(256)
+histogram_avg = np.zeros(256)
 
 with open(filename, 'rb') as f:
-  for i in range(0,100): # 10000
+  for i in range(0,1000): # 10000
     # Read in the image label
     byte_s = f.read(1)
 
@@ -22,34 +23,22 @@ with open(filename, 'rb') as f:
       for y in range(0,32):
         for x in range(0,32):
           byte_s      = f.read(1)
-          hist_idx    = ord(byte_s[0])
+          hist_idx    = byte_s[0] #ord(byte_s[0])
           if c == 0:
             histogram_r[hist_idx] += 1
+            histogram_avg[hist_idx] += 1
           if c == 1:
             histogram_g[hist_idx] += 1
+            histogram_avg[hist_idx] += 1
           if c == 2:
             histogram_b[hist_idx] += 1
+            histogram_avg[hist_idx] += 1
 
 # Normalize the histograms
 histogram_r = histogram_r / max(histogram_r)
 histogram_g = histogram_g / max(histogram_g)
 histogram_b = histogram_b / max(histogram_b)
-
-plt.figure(1)
-plt.subplot(311)
-plt.bar(range(0,256),histogram_r,width=0.5,color='r')
-plt.axis([0,255,0,1])
-
-plt.subplot(312)
-plt.bar(range(0,256),histogram_g,width=0.5,color='g')
-plt.axis([0,255,0,1])
-
-plt.subplot(313)
-plt.bar(range(0,256),histogram_b,width=0.5,color='b')
-plt.axis([0,255,0,1])
-
-
-#plt.show()
+histogram_avg = histogram_avg / max(histogram_avg)
 
 def gaussian(x, amp, cen, wid):
     return amp * exp(-(x-cen)**2 / wid)
@@ -58,29 +47,59 @@ from scipy.optimize import curve_fit
 
 init_vals = [0.8, 125, 50]
 
-best_vals, covar = curve_fit(gaussian, range(0,256), histogram_g,
+best_vals, covar = curve_fit(gaussian, range(0,256), histogram_avg,
         p0=init_vals)
 
-print best_vals
+print (best_vals)
 
-print len(range(0,256))
-print len((gaussian(x,best_vals[0],best_vals[1],best_vals[2])            
-            for x in range(0,256)))
+from scipy.interpolate import interp1d
+from scipy.interpolate import Rbf, InterpolatedUnivariateSpline
 
-r_gauss = []
-g_gauss = []
-b_gauss = []
-for intensity in range(0,256):
-    r_gauss = 
+f   = interp1d(range(0,256),histogram_avg,kind='cubic')
+rbf = Rbf(range(0,256),histogram_avg)
+
+avg_gauss = []
+
+avg_cubic = []
+
+avg_rbf   = []
+
+for x in range(0,256):
+  avg_gauss.append(
+    gaussian(x,best_vals[0],best_vals[1],best_vals[2]))
+  avg_cubic.append( f(x) )
+  avg_rbf.append( rbf(x) )
+
+plt.figure(1)
+
+plt.subplot(411)
+plt.plot(range(0,256),histogram_avg,'b',
+         range(0,256),avg_gauss, 'g',
+         range(0,256),avg_rbf, 'k')
+plt.axis([0,255,0,1])
+
+plt.subplot(412)
+plt.plot(range(0,256),histogram_r,'b',
+         range(0,256),avg_gauss, 'g',
+         range(0,256),avg_rbf, 'k')
+plt.axis([0,255,0,1])
+
+plt.subplot(413)
+plt.plot(range(0,256),histogram_g,'b',
+         range(0,256),avg_gauss, 'g',
+         range(0,256),avg_rbf, 'k')
+plt.axis([0,255,0,1])
+
+plt.subplot(414)
+plt.plot(range(0,256),histogram_b,'b',
+         range(0,256),avg_gauss, 'g',
+         range(0,256),avg_rbf, 'k')
+plt.axis([0,255,0,1])
 
 
-'''
-plt.figure(2)
-plt.plot((range(0,256)), \
-         (gaussian(x,best_vals[0],best_vals[1],best_vals[2]) \
-         for x in range(0,256)) )
+
 plt.show()
-'''
+
 
 
 
