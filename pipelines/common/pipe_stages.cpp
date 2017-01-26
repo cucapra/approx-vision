@@ -215,6 +215,42 @@ void OpenCV_remosaic (Mat *InMat ) {
 
 }
 
+void OpenCV_lloydmax_requant (Mat *InMat ) {
+  vector<Mat> three_channels;
+  cv::split((*InMat), three_channels);
+
+  static const int num_levels = 256;
+  float levels[num_levels];
+
+  // Read in the levels
+  ifstream file;
+	file.open("../../analysis/lloydmax_b_CDF.txt");
+	if(file.is_open())  {
+     for(int i = 0; i < num_levels; ++i)  {
+			 file >> levels[i];
+	   }
+	}
+	// Scale the levels down to 0-1 range
+	for(int i=0; i<num_levels; i++) {
+    levels[i] = levels[i] / 256.0;
+	}
+  
+	// Requantize
+  for (int y=0; y<(*InMat).rows; y++) {
+    for (int x=0; x<(*InMat).cols; x++) {
+      for (int c=0; c<3; c++) {
+        auto pos = std::upper_bound(levels, 
+						                        levels + 256,
+					                          three_channels[c].at<float>(y,x))
+				                                                   	- levels;
+        three_channels[c].at<float>(y,x) = (float)(pos) / 256.0;
+			}
+		}
+	}
+	cv::merge(three_channels, *InMat); 
+
+}
+
 ///////////////////////////////////////////////////////////////////////////////////////
 // Halide Funcs for camera pipeline
 

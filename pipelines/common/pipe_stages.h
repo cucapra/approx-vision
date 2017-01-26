@@ -1,6 +1,10 @@
 
 #include "Halide.h"
 #include "halide_image_io.h"
+#include <iostream>
+#include <string>
+#include <fstream>
+#include <algorithm>
 #include <opencv2/opencv.hpp>
 
 using namespace Halide;
@@ -23,6 +27,8 @@ void OpenCV_renoise ( Mat *InMat );
 void OpenCV_remosaic (Mat *InMat );
 
 void OpenCV_gaussian_blur ( Mat *InMat );
+
+void OpenCV_lloydmax_requant( Mat *InMat );
 
 ///////////////////////////////////////////////////////////////////////////////////////
 // Halide Funcs for camera pipeline
