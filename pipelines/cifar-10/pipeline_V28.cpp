@@ -138,7 +138,7 @@ int main(int argc, char **argv) {
   ///////////////////////////////////////////////////////////////////////////////////////
   // Process Images
  
-  for (int i=0; i<100; i++) { //i<10000
+  for (int i=0; i<10000; i++) { //i<10000
 
     // Read in label
     infile.read(&val,1);
