@@ -13,30 +13,21 @@ from scipy.interpolate import Rbf, InterpolatedUnivariateSpline
 #filename = '/home/mbuckler/datasets/cifar-10/v6/data_batch_1.bin'
 filename = '/home/mbuckler/datasets/cifar-10/v6/data_batch_1.bin'
 
-
-# Tone mapping function unecessary as we have read in v6 data 
-'''
 #########################################
-# Read in and interpolate tone mapping
-camf_r = []
-camf_g = []
-camf_b = []
-camf_avg = []
+# Read in quantization levels
 
-firstline = True                                                         
-for line in open("../cam_models/NikonD7000/jpg2raw_respFcns.txt"):
-  listvals = line.split(" ")                                             
-  if firstline == False:                                                 
-    camf_r.append(float(listvals[0])*255.0)                         
-    camf_g.append(float(listvals[1])*255.0)                         
-    camf_b.append(float(listvals[2])*255.0)                        
-    camf_avg.append( ( float(listvals[0]) + 
-                       float(listvals[1]) +
-                       float(listvals[2]) ) * (255.0/3) )
-  firstline = False 
+lloydmax_a_file = '/home/mbuckler/Downloads/lloydmax_a.txt'
+lloydmax_b_file = '/home/mbuckler/Downloads/lloydmax_b.txt'
 
-camf_cubic = interp1d(range(0,256),camf_avg,kind='cubic')
-'''
+lloydmax_a = []
+with open(lloydmax_a_file) as f:
+  lloydmax_a = f.readlines()
+lloydmax_a = [float(level) for level in lloydmax_a]
+
+lloydmax_b = []
+with open(lloydmax_b_file) as f:
+  lloydmax_b = f.readlines()
+lloydmax_b = [float(level) for level in lloydmax_b]
 
 #########################################
 # Generate PDFs
@@ -51,7 +42,7 @@ pixel_data  = []
 num_samps   = 0
 
 with open(filename, 'rb') as f:
-  for i in range(0,10000): # 10000
+  for i in range(0,1000): # 10000
     # Read in the image label
     byte_s = f.read(1)
 
@@ -141,7 +132,7 @@ plt.show()
 import numpy as np
 import scipy.interpolate as interpolate
 
-def inverse_transform_sampling(data, n_bins=256, n_samples=10000):
+def inverse_transform_sampling(data, n_bins=256, n_samples=1000):
         hist, bin_edges = np.histogram(data, bins=n_bins, density=True)
         cum_values = np.zeros(bin_edges.shape)
         cum_values[1:] = np.cumsum(hist*np.diff(bin_edges))
@@ -153,7 +144,7 @@ def inverse_transform_sampling(data, n_bins=256, n_samples=10000):
 cdf_rand_samples = inverse_transform_sampling(pixel_data,256,100000)
 
 
-'''
+
 plt.figure(5)
 plt.subplot(2,1,1)
 plt.hist(pixel_data,256,normed=1)
@@ -162,7 +153,7 @@ plt.subplot(2,1,2)
 plt.hist(cdf_rand_samples,256,normed=1)
 plt.xlim([0,255])
 plt.show()
-'''
+
 
 ###################################
 # Define functions for quantization experiments
@@ -257,20 +248,10 @@ import scipy.integrate as integrate
 
 max_sample = max(cdf_rand_samples)
 
-'''
-def lognorm_func (in_):
-    return (np.exp(-(np.log(in_) - mu)**2 / (2 * sigma**2))
-        / (in_ * sigma * np.sqrt(2 * np.pi)))
-def scaled_lognorm_func (in_):
-    return in_ * (np.exp(-(np.log(in_) - mu)**2 / (2 * sigma**2))
-        / (in_ * sigma * np.sqrt(2 * np.pi)))
-'''
-
 def pdf_func (in_):
     return PDF_cubic(in_)
 def scaled_pdf_func (in_):
     return in_ * PDF_cubic(in_)
-
 
 # Represent with 8 bits
 num_bits = 8
@@ -278,43 +259,34 @@ num_bits = 8
 # The number of representation points
 M = (2**num_bits)
 
-uniform_init = False
-cdf_init     = False
-file_init    = True
+# a and b read in from files
+'''
+# Initialize a and b
 lloydmax_a = [None] * M
 lloydmax_b = [None] * M
+init_step_size = max_sample/M
+for i in range(0,M):
+    lloydmax_b[i] = (i+1)*init_step_size
+for i in range(0,M):
+    lloydmax_a[i] = lloydmax_b[i] - (init_step_size/2)
+'''
 
-# If starting from uniform quantization
-if uniform_init:
-  # Initialize a and b
-  init_step_size = max_sample/M
-  for i in range(0,M):
-      lloydmax_b[i] = (i+1)*init_step_size
-  for i in range(0,M):
-      lloydmax_a[i] = lloydmax_b[i] - (init_step_size/2)
-# If starting from CDF based quantization
-if cdf_init:
-  hist, bin_edges = np.histogram(pixel_data, bins=256, density=True)          
-  cum_values = np.zeros(bin_edges.shape)                                   
-  cum_values[1:] = np.cumsum(hist*np.diff(bin_edges))                      
-  inv_cdf = interpolate.interp1d(cum_values,bin_edges)
-  for idx in range(0,256):
-    lloydmax_b[idx] = inv_cdf(idx/255)
-  for idx in range(0,256):
-    if idx != 255:
-      lloydmax_a[idx] = (lloydmax_b[idx]+lloydmax_b[idx+1]) / 2
-    else:
-      lloydmax_a[idx] = 255
-if file_init:
-  lloydmax_a_file = '/home/mbuckler/Downloads/lloydmax_a.txt'              
-  lloydmax_b_file = '/home/mbuckler/Downloads/lloydmax_b.txt'
-  with open(lloydmax_a_file) as f:                                         
-    lloydmax_a = f.readlines()                                             
-  lloydmax_a = [float(level) for level in lloydmax_a]                      
-  with open(lloydmax_b_file) as f:                                         
-    lloydmax_b = f.readlines()                                             
-  lloydmax_b = [float(level) for level in lloydmax_b] 
+####################################################
+# Reverse CDF initializer experiment
+hist, bin_edges = np.histogram(pixel_data, bins=256, density=True)
+cum_values = np.zeros(bin_edges.shape)
+cum_values[1:] = np.cumsum(hist*np.diff(bin_edges))
+inv_cdf = interpolate.interp1d(cum_values,bin_edges)
 
+'''
+plt.figure(8)
+plt.plot(np.arange(0,1,0.0001),[inv_cdf(x) for x in np.arange(0,1,0.0001)])
+'''
+
+for idx in range(0,256):
+  lloydmax_b[idx] = inv_cdf(idx/255)
+
+####################################################
 
 def lloydmax_encode_single (in_):
     idx  = 0
@@ -331,74 +303,33 @@ def lloydmax_decode (in_):
     return [lloydmax_a[val] for val in in_]
     
 encoded_lloydmax = lloydmax_encode(cdf_rand_samples)
-decoded_lloydmax = lloydmax_decode(encoded_lloydmax)
-rmse = get_rmse(decoded_lloydmax,cdf_rand_samples)
-print ('Test of Lloydmax initializer')
-print ('  RMSE: '+str(rmse))
-print ('  PSNR: '+str(rmse2psnr(rmse))+' dB')
-  
-plt.figure(9)                                                            
-                                                                         
-plt.subplot(3,1,1)                                                       
-plt.hist(encoded_8bit,256,normed=1)                                      
-plt.xlim([0,255])                                                        
-                                                                         
-plt.subplot(3,1,2)                                                       
-plt.hist(encoded_lloydmax,256,normed=1)                                  
-plt.xlim([0,255])                                                        
-                                                                         
+#decoded_lloydmax = lloydmax_decode(encoded_lloydmax)
+#rmse = get_rmse(decoded_lloydmax,cdf_rand_samples)
+#print ('Lloydmax encoded 8 bit data')
+#print ('  RMSE: '+str(rmse))
+#print ('  PSNR: '+str(rmse2psnr(rmse))+' dB')
+
+
+# Plot the result
+
+
+plt.figure(9)
+
+plt.subplot(3,1,1)
+plt.hist(encoded_8bit,256,normed=1)
+plt.xlim([0,255])
+
+plt.subplot(3,1,2)
+plt.hist(encoded_lloydmax,256,normed=1)
+plt.xlim([0,255])
+
 plt.show()
 
 
-
-def lloydmax_learn (rmse_goal):
-    rmse = 1.0
-    while (rmse > rmse_goal):
-        # Re-initialize b
-        for idx in range(0,M-1):
-            lloydmax_b[idx] = 0.5*(lloydmax_a[idx+1]+lloydmax_a[idx])
-        # Re-initialize a
-        for idx in range(0,M):
-            if idx == 0:
-                integrate_low_end = 0
-            else:
-                integrate_low_end = lloydmax_b[idx-1]
-            integrate_high_end = lloydmax_b[idx]
-            
-            numerator,err   = integrate.quad(scaled_pdf_func,
-                                             integrate_low_end,
-                                             integrate_high_end)
-            denominator,err = integrate.quad(pdf_func,
-                                             integrate_low_end,
-                                             integrate_high_end)
-               
-            lloydmax_a[idx] = numerator/denominator
-        # Test the current RMSE
-        encoded_lloydmax = lloydmax_encode(cdf_rand_samples)
-        decoded_lloydmax = lloydmax_decode(encoded_lloydmax)
-        rmse = get_rmse(decoded_lloydmax,cdf_rand_samples)
-        #print np.mean(lloydmax_b)
-        print ('  RMSE: '+str(rmse))
-        print ('  PSNR: '+str(rmse2psnr(rmse))+' dB')
-        # Open up files for a and b
-        a_file = open("lloydmax_a_2.txt", "w")
-        b_file = open("lloydmax_b_2.txt", "w")
-        for item in lloydmax_a:
-          a_file.write("%s\n" % item)
-        for item in lloydmax_b:
-          b_file.write("%s\n" % item)
-        a_file.close()
-        b_file.close()
-
-    
-lloydmax_learn(0.001)
-print ('success!')
-
-
-
-
-
-
+        # Open up files for a and b                                      
+b_file = open("lloydmax_b_CDF.txt", "w")                           
+for item in lloydmax_b:                                          
+  b_file.write("%s\n" % item) 
 
 
 

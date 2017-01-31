@@ -15,7 +15,7 @@ histogram_b = np.zeros(256)
 histogram_avg = np.zeros(256)
 
 with open(filename, 'rb') as f:
-  for i in range(0,1000): # 10000
+  for i in range(0,10000): # 10000
     # Read in the image label
     byte_s = f.read(1)
 
