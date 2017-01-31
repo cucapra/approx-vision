@@ -9,15 +9,9 @@
 #include "../common/LoadCamModel.h"
 #include "../common/MatrixOps.h"
 
-// Pipeline V1 
-// 
-// Test type: 
-// Full Reverse
-// 
-// Stages:
-// Rto, Rg, Rtr, Renos, Remos
-
 int main(int argc, char **argv) {
+
+  int num_bits = 6;
 
   using namespace std;
 
@@ -125,53 +119,24 @@ int main(int argc, char **argv) {
   // Load input image 
   Image<uint8_t> input = load_image(in_img_path);
 
-  ///////////////////////////////////////////////////////////////////////////////////////
-  // Camera pipeline
+    ///////////////////////////////////////////////////////////////////////////////////////
+    // Camera pipeline
 
-  width  = input.width();
-  int height = input.height();
+    width  = input.width();
+    int height = input.height();
 
-  // Scale to 0-1 range and represent in floating point
-  Func scale              = make_scale        ( &input);
+    // No scaling here since performing requantization in 8 bit space
+    
+    // Requantize
+    Func requant = make_requant( &input, num_bits );
 
-  // Backward pipeline
-  Func rev_tone_map       = make_rev_tone_map ( &scale,
-                                                  &rev_tone_h );
-  Func rev_gamut_map_ctrl = make_rbf_ctrl_pts ( &rev_tone_map,
-                                                num_ctrl_pts,
-                                                &rev_ctrl_pts_h,
-                                                &rev_weights_h );
-  Func rev_gamut_map_bias = make_rbf_biases   ( &rev_tone_map,
-                                                &rev_gamut_map_ctrl,
-                                                &rev_coefs );
-  Func rev_transform      = make_transform    ( &rev_gamut_map_bias,
-                                                &TsTw_tran_inv );
+   
+    ///////////////////////////////////////////////////////////////////////////////////////
+    // Scheduling
 
-  rev_tone_map.compute_root();
-  rev_gamut_map_ctrl.compute_root();
-
-  Image<float> opencv_in_image = rev_transform.realize(width, height, 3);
-
-  Mat opencv_in_mat = Image2Mat(&opencv_in_image);
-
-  OpenCV_renoise(&opencv_in_mat);
-
-  OpenCV_remosaic(&opencv_in_mat);
-
-  Image<float> opencv_out = Mat2Image(&opencv_in_mat);
-
-  Func Image2Func         = make_Image2Func   ( &opencv_out );
-
-  // Scale back to 0-255 and represent in 8 bit fixed point
-  Func descale            = make_descale      ( &Image2Func );
-
-
-  ///////////////////////////////////////////////////////////////////////////////////////
-  // Scheduling
-
-  // Use JIT compiler
-  descale.compile_jit();
-  Image<uint8_t> output = descale.realize(width,height,3);
+    // Use JIT compiler
+    requant.compile_jit();
+    Image<uint8_t> output = requant.realize(width,height,3);    
 
   ////////////////////////////////////////////////////////////////////////
   // Save the output
