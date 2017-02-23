@@ -114,9 +114,7 @@ class TestPipeline(object):
     # compare the two image files
     mse_diff = util_compare.compare_images(out_filepath, ref_filepath)
 
-    print "\n"
     print "file: %s, mse: %f" % (out_filepath, mse_diff)
-    print "\n"
 
     if mse_diff > 0.0:
       return False
@@ -207,6 +205,6 @@ if __name__ == "__main__":
       rebuild = False
 
       if not ref_mode: # also compare files with ref files
-        self.compare_pipeline(dataset_name, version_num)
+        tp.compare_pipeline(dataset_name, version_num)
 
 
