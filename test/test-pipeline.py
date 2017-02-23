@@ -3,13 +3,14 @@ import ast
 import ConfigParser
 import os
 import subprocess, sys, shutil
-import pdb
+import util_compare
 
+'''
 
+'''
 class TestPipeline(object):
 
-  def __init__(self, datasets, datasets_bin, versions, \
-                pipeline_prefix, \
+  def __init__(self, datasets, datasets_bin, versions, pipeline_prefix, \
                 ref_dir, in_dir, out_dir):
     self.datasets = datasets
     self.datasets_bin = datasets_bin
@@ -22,9 +23,15 @@ class TestPipeline(object):
     self.out_dir = out_dir
 
 
-  ''' Run all images for specified dataset and pipeline version.
+  ''' Produce new image by running pipeline specified by dataset & version.
+      Args
+        dataset(String): name of dataset for pipeline to run
+        version(Integer): version number for pipeline to run
+        rebuild(Boolean): rebuild pipeline cpp if set to True
+
+      * uses images in in_dir and produces new images in out_dir 
   '''
-  def run_pipeline(self, dataset, version):
+  def run_pipeline(self, dataset, version, rebuild):
 
     # check valid dataset & version
     if not(dataset in self.datasets) or not(version in self.versions):
@@ -39,15 +46,17 @@ class TestPipeline(object):
 
     # newly compile pipeline version
     pipeline_filename = self.get_pipeline_filename(dataset, version)
-    pipeline_folder = os.path.dirname(pipeline_filename)
-    command = ["make", "--directory", pipeline_folder, "version="+str(version)]
-    subprocess.call(' '.join(command), shell=True)
+    pipeline_folder = os.path.dirname(pipeline_filename)  
+    if rebuild:
+      command = ["make", "--directory", pipeline_folder, "version="+str(version)]
+      subprocess.call(' '.join(command), shell=True)
 
     # get original file
     in_dataset_dir = os.path.join(self.in_dir, dataset)
     filename = self.get_first_filename(in_dataset_dir)
     if not filename:
       return -1
+
     in_filepath = os.path.join(in_dataset_dir, filename)
     out_filepath = os.path.join(out_dataset_version_dir, filename)
 
@@ -58,22 +67,32 @@ class TestPipeline(object):
     img = Image.open(in_filepath)
     img.save(img_temp_in)
 
+    # change working dir
+    os.chdir(pipeline_folder)
+
     # call pipeline
     command = [pipeline_filename, img_temp_in, out_dataset_version_dir + "/"]
-    print ' '.join(command)
-    subprocess.call(' '.join(command), \
-                    shell=True)
+    subprocess.call(' '.join(command), shell=True)
 
     # convert back
     img = Image.open(img_temp_out)
     img.save(out_filepath)
 
     # remove temp files
-    subprocess.call(["rm", "-rf", img_temp_in, img_temp_out], shell=True)
+    command = ["rm", "-rf", img_temp_in, img_temp_out]
+    subprocess.call(' '.join(command), shell=True)
 
     return 0
 
-  ''' compare 
+  ''' Compares images to the reference images. 
+      Returns True if images are the same, False otherwise
+
+      Args
+        dataset(String): name of the dataset for pipeline
+        version(Integer): version number for pipeline
+
+      Returns
+        True if images are the same. False otherwise 
   '''
   def compare_pipeline(self, dataset, version):
 
@@ -82,6 +101,7 @@ class TestPipeline(object):
     filename = self.get_first_filename(out_folder)
     if not filename:
       return -1
+
     out_filepath = os.path.join(out_folder, filename) 
 
     # check corresponding ref file exists
@@ -91,9 +111,17 @@ class TestPipeline(object):
       print "no ref test file exists: %s" % ref_filepath
       return -1
 
-    # compare the two files
+    # compare the two image files
+    mse_diff = util_compare.compare_images(out_filepath, ref_filepath)
 
-    return False
+    print "\n"
+    print "file: %s, mse: %f" % (out_filepath, mse_diff)
+    print "\n"
+
+    if mse_diff > 0.0:
+      return False
+
+    return True
 
 
   ''' returns first filename in folder or None if no such file
@@ -132,22 +160,53 @@ def config_parser_list(parser, section, item):
   return ast.literal_eval(parser.get(section, item))
 
 if __name__ == "__main__":
+
+  if len(sys.argv) != 2 or (sys.argv[1] != "ref" and sys.argv[1] != "test"):
+    print "\nUsage:\n"
+    print "\ttest-pipeline ref : generates new reference files\n"
+    print "\ttest-pipeline test : generates new test files and compare them with reference files\n"
+    sys.exit()
+
+  ref_mode = False
+  print sys.argv[1]
+  if sys.argv[1] == "ref":
+    sys.stdout.write("Are you sure you want to generate reference images? Type 'yes' to confirm.")
+    user_input = raw_input().lower()
+    if user_input != "yes":
+      sys.exit()
+
+    ref_mode = True
+
+  # config
   config = ConfigParser.ConfigParser()
   config.read("config.ini")
 
-  datasets = config_parser_list(config, "main", "datasets")
+  datasets    = config_parser_list(config, "main", "datasets")
   datasets_bin = config_parser_list(config, "main", "datasets_bin")
   versions = config_parser_list(config, "main", "versions")
-
   pipeline_prefix = config.get("main", "pipeline_prefix")
-
-  ref_dir = config.get("reference", "dataset_path")
   in_dir = config.get("main", "dataset_path")
+  ref_dir = config.get("reference", "dataset_path")
   out_dir = config.get("test", "dataset_path")
+
+  # ref mode: generate reference files based on current pipeline implementations
+  if ref_mode:
+    out_dir = ref_dir
+
+  # test mode: generate test files based on current pipeline implementations
+  #            then compare these files with corresponding reference files
 
   tp = TestPipeline(datasets, datasets_bin, versions, pipeline_prefix, \
                     ref_dir, in_dir, out_dir)
 
-  tp.run_pipeline("coco-2014", 5)
+  # run for each dataset and version combination
+  for version_num in versions:
+    rebuild = True
+    for dataset_name in datasets:
+      tp.run_pipeline(dataset_name, version_num, rebuild)
+      rebuild = False
 
-  pdb.set_trace()
+      if not ref_mode: # also compare files with ref files
+        self.compare_pipeline(dataset_name, version_num)
+
+
