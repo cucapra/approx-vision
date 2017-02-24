@@ -198,13 +198,16 @@ if __name__ == "__main__":
                     ref_dir, in_dir, out_dir)
 
   # run for each dataset and version combination
+  test_passed = True
   for version_num in versions:
     rebuild = True
+
     for dataset_name in datasets:
       tp.run_pipeline(dataset_name, version_num, rebuild)
       rebuild = False
 
       if not ref_mode: # also compare files with ref files
-        tp.compare_pipeline(dataset_name, version_num)
+        test_passed = test_passed and tp.compare_pipeline(dataset_name, version_num)
 
+  print "Test Passed: ", test_passed
 
