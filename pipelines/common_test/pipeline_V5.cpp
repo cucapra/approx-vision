@@ -1,13 +1,34 @@
+#include "PipelineUtil.h"
 
-#include "Halide.h"
-#include "halide_image_io.h"
-#include <opencv2/opencv.hpp>
-#include <stdio.h>
-#include <math.h>
-#include "../common_test/pipe_stages.h"
-#include "../common_test/ImgPipeConfig.h"
-#include "../common_test/LoadCamModel.h"
-#include "../common_test/MatrixOps.h"
+#include <string>
+#include <iostream>
+
+int main(int argc, char **argv) {
+
+  using namespace std;
+
+
+  // Inform user of usage method
+  if ( argc != 3 )
+  {
+      printf("usage: \n./convert path/to/in/image out/image/dir\n");
+      return -1;
+  }
+
+  // Input image (path and name)
+  char * in_img_path = argv[1];
+
+  // Output image (just path)
+  char * out_path    = argv[2];
+
+  PipelineStageRev rev_stages[] = { RevToneMap, RevGamutMap, RevTransform };
+  PipelineStageCV cv_stages[] = { Remosaic };
+  PipelineStageFwd fwd_stages[] = { };
+
+  run_image_pipeline(in_img_path, out_path, rev_stages, cv_stages, fwd_stages );
+}
+
+
 
 // Pipeline V5 
 // 
@@ -16,7 +37,7 @@
 // 
 // Stages:
 // Rto, Rg, Rtr, Remos
-
+/**
 int main(int argc, char **argv) {
 
   using namespace std;
@@ -179,4 +200,4 @@ int main(int argc, char **argv) {
 
   return 0;
 }
-
+*/

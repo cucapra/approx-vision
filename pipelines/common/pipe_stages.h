@@ -38,6 +38,7 @@ Func make_scale( Image<uint8_t> *in_img );
 Func make_descale( Func *in_func );
 
 Func make_requant( Image<uint8_t> *in_img, int num_bits );
+Func make_requant( Func *in_func, int num_bits );
 
 Func make_demosaic_subsample( Func *in_func );
 

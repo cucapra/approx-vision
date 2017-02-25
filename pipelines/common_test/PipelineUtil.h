@@ -1,14 +1,11 @@
-#include "Halide.h"
-#include "halide_image_io.h"
 
-#include <opencv2/opencv.hpp>
 #include <stdio.h>
 #include <math.h>
 
-#include "../common_test/pipe_stages.h"
-#include "../common_test/ImgPipeConfig.h"
-#include "../common_test/LoadCamModel.h"
-#include "../common_test/MatrixOps.h"
+#include "../common/pipe_stages.h"
+#include "../common/ImgPipeConfig.h"
+#include "../common/LoadCamModel.h"
+#include "../common/MatrixOps.h"
 
 using namespace std;
 
@@ -16,15 +13,15 @@ using namespace std;
 enum PipelineStageRev { // reverse
   RevToneMap,
   RevGamutMap,
-  RevTransform,
-}
+  RevTransform
+};
 
 enum PipelineStageCV { // vision reverse
   Renoise,
   Remosaic,
-  GaussianBlur,
-  LloydRequant,
-}
+  GaussianBlurCV,
+  LloydRequant
+};
 
 enum PipelineStageFwd { // forward
   Requant1, // linear requantize
@@ -43,18 +40,18 @@ enum PipelineStageFwd { // forward
   DemosNN,        // nearest neighbor demosaic
   DemosInterp,    // bilinear interpolated demosaic
   QrtrResBinning, // quarter resolution pixel binning
-  PwlToneMap,     // piecewise linear tone map
-}
+  PwlToneMap      // piecewise linear tone map
+};
 
 int run_image_pipeline( char* in_img_path,
                         char* out_img_path, 
-                        PipelineStageRev[] rev_stages,  // reverse stages
-                        PipelineStageCV[] cv_stages,    // CV stages
-                        PipelineStageFwd[] fwd_stages,  // forward stages
+                        enum PipelineStageRev rev_stages[],  // reverse stages
+                        enum PipelineStageCV cv_stages[],    // CV stages
+                        enum PipelineStageFwd fwd_stages[]   // forward stages
                         );
 
 Func run_image_pipeline_rev(Func *in_func, 
-                            PipelineStageRev[]  rev_stages,
+                            PipelineStageRev rev_stages[],
                             Image<float> *rev_tone_h, // rev tone map
                             int num_ctrl_pts,         // rbf ctrl pts
                             Image<float> *ctrl_pts_h, // rbf ctrl pts
@@ -63,10 +60,10 @@ Func run_image_pipeline_rev(Func *in_func,
                             vector<vector<float>> *TsTw_tran_inv // inv transform 
                             );
 
-void run_image_pipeline_cv( Mat *InMat, PipelineStageCV[] cv_stages );
+void run_image_pipeline_cv( Mat *InMat, PipelineStageCV cv_stages[] );
 
 Func run_image_pipeline_fwd(Func *in_func, 
-                            PipelineStageFwd[] fwd_stages,
+                            PipelineStageFwd fwd_stages[],
                             Image<float> *tone_h,     // tone map
                             int num_ctrl_pts,         // rbf ctrl pts
                             Image<float> *ctrl_pts_h, // rbf ctrl pts

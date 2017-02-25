@@ -281,6 +281,17 @@ Func make_requant( Image<uint8_t> *in_img, int num_bits ) {
   return requant;
 }
 
+Func make_requant( Func *in_func, int num_bits ) {
+  Var x, y, c;
+  int scale_val = pow(2,(8-num_bits));
+
+  Func requant("requant");
+    Expr right_shift = (*in_func)(x,y,c) / scale_val;
+    requant(x,y,c)   = right_shift * scale_val;
+
+  return requant;
+}
+
 Func make_demosaic_subsample( Func *in_func ) {
 
   Var x, y, c;

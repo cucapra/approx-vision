@@ -166,7 +166,6 @@ if __name__ == "__main__":
     sys.exit()
 
   ref_mode = False
-  print sys.argv[1]
   if sys.argv[1] == "ref":
     sys.stdout.write("Are you sure you want to generate reference images? Type 'yes' to confirm.")
     user_input = raw_input().lower()
