@@ -11,13 +11,16 @@
 # have 2^n entries and the final entry will have a value of 1.0
 # 
 # Use:
-# python adc_powersim.py <levels_file>
-#
+# python adc_powersim.py <adc_levels_file> <input_PDF_file>
+# 
+# Note that ../analysis/cifar_10_PDF.txt contains the PDF for the input
+# for natural images
 
 import numpy as np
 import sys
 
 levels_file = sys.argv[1] 
+pdf_file    = sys.argv[2]
 
 levels_volt = []
 levels_energy = []
@@ -81,13 +84,34 @@ for l,level_volt in enumerate(levels_volt):
 
   # Quantize the value
   encoded_val, level_energy = quantize(voltage)
-  #print voltage
-  #print encoded_val
-  #print level_energy
-  #print "-----"
 
   # Record the energy it took to quantize
   levels_energy.append(level_energy)
 
-# Print average energy
-print (sum(levels_energy)/len(levels_energy))
+# Print average energy assuming uniform PDF input
+#print (sum(levels_energy)/len(levels_energy))
+
+# Read in our PDF
+with open(pdf_file) as f2:
+  in_data_PDF = f2.readlines()
+  in_data_PDF = [float(x.strip('\n')) for x in in_data_PDF] 
+
+# If there are more quantization levels than PDF points (12 bit ADC even
+# though our PDF only has 8 bits)
+while( len(levels_energy) > len(in_data_PDF) ):
+  # Combine quantization level energy scores until the number of levels
+  # matches the PDF entries
+  even_levels = levels_energy[1::2]
+  odd_levels  = levels_energy[::2]
+  levels_energy = [x+y for x,y in zip(even_levels, odd_levels)]
+
+# If there are more PDF points than quantization levels (5 bit ADC even
+# though our PDF has 8 bits)
+while( len(levels_energy) < len(in_data_PDF) ):
+  even_PDF = in_data_PDF[1::2]
+  odd_PDF  = in_data_PDF[::2]
+  in_data_PDF = [x+y for x,y in zip(even_PDF, odd_PDF)]
+
+# Compute the expected value of the energy cost per ADC call given the
+# energy cost and value probability
+print(sum([x*y for x,y in zip(levels_energy,in_data_PDF)]))
