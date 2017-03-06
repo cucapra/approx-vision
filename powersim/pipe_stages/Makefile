@@ -10,4 +10,6 @@ all:
 	g++ -o OpenCV_debayer OpenCV_debayer.cpp `pkg-config opencv --cflags --libs` -lm
 	g++ -o OpenCV_denoise OpenCV_denoise.cpp `pkg-config opencv --cflags --libs` -lm
 	g++ -o OpenCV_jpeg OpenCV_jpeg.cpp `pkg-config opencv --cflags --libs` -lm
-	g++ -o OpenCV_lut OpenCV_lut.cpp `pkg-config opencv --cflags --libs` -lm
+	g++ -o OpenCV_log OpenCV_log.cpp `pkg-config opencv --cflags --libs` -lm
+	g++ -o OpenCV_lut_1C OpenCV_lut_1C.cpp `pkg-config opencv --cflags --libs` -lm
+	g++ -o OpenCV_lut_3C OpenCV_lut_3C.cpp `pkg-config opencv --cflags --libs` -lm
