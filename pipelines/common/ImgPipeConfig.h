@@ -1,3 +1,4 @@
+
 ///////////////////////////////////////////////////////////////
 // Image Pipeline Halide Configuration File
 ///////////////////////////////////////////////////////////////
@@ -17,11 +18,11 @@
 ///////////////////////////////////////////////////////////////
 
 // Demosaiced raw input (to forward pipeline)
-char demosaiced_image[] = 
+static char demosaiced_image[] = 
 "../../imgs/NikonD7000FL/DSC_0916.NEF.raw_1C.tiff.demosaiced.png";
 
 // Jpeg input (to backward pipeline)
-char jpg_image[] =
+static char jpg_image[] =
 "temp.png";
 
 ///////////////////////////////////////////////////////////////
@@ -29,17 +30,17 @@ char jpg_image[] =
 ///////////////////////////////////////////////////////////////
 
 // Path to the camera model to be used
-char cam_model_path[] =
+static char cam_model_path[] =
 "../../cam_models/NikonD7000/";
 
 // White balance index (select white balance from transform file)
 // The first white balance in the file has a wb_index of 1
 // For more information on model format see the readme
-int wb_index = 
+static int wb_index = 
 6;
 
 // Number of control points
-const int num_ctrl_pts = 
+static const int num_ctrl_pts = 
 3702;
 
 ///////////////////////////////////////////////////////////////
@@ -53,7 +54,7 @@ const int num_ctrl_pts =
 // pattern start if using the version of this pipeline with
 // demosaicing
 
-const int patchstarts[12][2] = {
+static const int patchstarts[12][2] = {
   {551,  2751},
   {1001, 2751},
   {1501, 2751},
@@ -69,9 +70,9 @@ const int patchstarts[12][2] = {
 };
 
 // Height and width of patches
-const int patchsize = 
+static const int patchsize = 
 10;
 
 // Number of patches to test
-const int patchnum  = 
+static const int patchnum  = 
 1;

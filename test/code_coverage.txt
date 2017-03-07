@@ -1,0 +1,29 @@
+# Reverse
+RevToneMap,       yes
+RevGamutMap,      yes
+RevTransform      yes
+
+# OpenCV
+Renoise,          no
+Remosaic,         yes
+GaussianBlurCV,   no
+LloydRequant      no
+
+# Forward
+Requant1,         no
+Requant2,
+Requant3,
+Requant4,
+Requant5,
+Requant6,
+Requant7,
+
+Transform,        no
+GamutMap,         yes
+ToneMap,          yes
+
+DemosSubSample,   no
+DemosNN,        
+DemosInterp,    
+QrtrResBinning, 
+PwlToneMap      
