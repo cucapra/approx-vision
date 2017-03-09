@@ -16,8 +16,8 @@ filename = '/home/mbuckler/datasets/cifar-10/v6/data_batch_1.bin'
 #########################################
 # Read in quantization levels
 
-lloydmax_a_file = '/home/mbuckler/Downloads/lloydmax_a.txt'
-lloydmax_b_file = '/home/mbuckler/Downloads/lloydmax_b.txt'
+lloydmax_a_file = 'lloydmax_a.txt'
+lloydmax_b_file = 'lloydmax_b.txt'
 
 lloydmax_a = []
 with open(lloydmax_a_file) as f:
@@ -73,6 +73,14 @@ histogram_r = histogram_r / (total/4)
 histogram_g = histogram_g / (total/4)
 histogram_b = histogram_b / (total/4)
 histogram_avg = histogram_avg / total
+
+# Print average PDF for energy simulation
+f = open('cifar_10_PDF.txt', 'w')
+for prob in histogram_avg:
+  f.write("%s\n" % prob)
+
+print("Hopefully 1:")
+print(sum(histogram_avg))
 
 def gaussian(x, amp, cen, wid):
     return amp * exp(-(x-cen)**2 / wid)
