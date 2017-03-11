@@ -10,7 +10,7 @@
 using namespace std;
 
 // uncomment for debug prints
-// #define _DEBUG_MODE;
+#define _DEBUG_MODE
 
 #ifdef _DEBUG_MODE
 #define debug_print(x) cout << (x) << endl;
@@ -35,15 +35,16 @@ enum PipelineStageCV { // openCV
 };
 
 enum PipelineStageFwd { // forward
-  Requant1,       // linear requantize
-  Requant2,
+  Transform,
+
+  Requant1,       // linear requantize, 
+  Requant2,       // relies on the fact enum val is 1, 2, 3, ... here
   Requant3,
   Requant4,
   Requant5,
   Requant6,
   Requant7,
 
-  Transform,
   GamutMap,
   ToneMap,
 
@@ -133,6 +134,7 @@ void run_image_pipeline_cv( Mat *InMat,
 Func run_image_pipeline_fwd(Func *in_func, 
                             PipelineStageFwd fwd_stages[],
                             int num_stages,
+                            vector<int> &qrtr_bin_factor, // qrtr binning factor
                             Image<float> *tone_h,     // tone map
                             int num_ctrl_pts,         // rbf ctrl pts
                             Image<float> *ctrl_pts_h, // rbf ctrl pts

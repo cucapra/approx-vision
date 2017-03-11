@@ -1,29 +1,37 @@
 # Reverse
-RevToneMap,       yes
-RevGamutMap,      yes
-RevTransform      yes
+RevToneMap,       yes (V5, V7, V11)
+RevGamutMap,      yes (V5, V11)
+RevTransform      yes (V5, V11)
 
 # OpenCV
-Renoise,          no
-Remosaic,         yes
-GaussianBlurCV,   no
-LloydRequant      no
+Renoise,          no  (introduces randomness by default)
+Remosaic,         yes (V5, V11)
+GaussianBlurCV,   no  (no need)
+LloydRequant      yes (V76)
 
 # Forward
-Requant1,         no
-Requant2,
-Requant3,
-Requant4,
-Requant5,
-Requant6,
-Requant7,
+Requant1,         yes (V50)
+Requant2,         yes (V49)
+Requant3,         yes (V48)
+Requant4,         yes (V47)
+Requant5,         yes (V46)
+Requant6,         yes (V45)
+Requant7,         yes (V44)
 
-Transform,        no
-GamutMap,         yes
-ToneMap,          yes
+Transform,        yes (V11)
+GamutMap,         yes (V9, V11)
+ToneMap,          yes (V9, V11, V12)
 
-DemosSubSample,   no
-DemosNN,        
-DemosInterp,    
-QrtrResBinning, 
-PwlToneMap      
+DemosSubSample,   yes (V77)
+DemosNN,          yes (V78)
+DemosInterp,      yes (V79)
+QrtrResBinning,   yes (V76)
+PwlToneMap        yes (V76)
+
+
+
+TODO:
+-finish up modular for parmaters
+-test for all without noise(create new version if nece)
+-configurable for camera model path
+-upload csv to wiki 

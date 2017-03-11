@@ -196,10 +196,10 @@ if __name__ == "__main__":
   ref_dir         = config.get("reference", "dataset_path")
   out_dir         = config.get("test", "dataset_path")
 
-  # test mode: generate test files based on current pipeline implementations
+  # test mode: generate test files based on original pipeline implementations
   #            then compare these files with corresponding reference files
 
-  # ref mode: generate reference files based on current pipeline implementations
+  # ref mode: generate reference files based on original pipeline implementations
   if ref_mode:
     out_dir = ref_dir
     pipeline_prefix = pipeline_prefix = config.get("main", "pipeline_prefix_ref")
@@ -217,7 +217,7 @@ if __name__ == "__main__":
       rebuild = False
 
       if not ref_mode: # also compare files with ref files
-        test_passed = test_passed and tp.compare_pipeline(dataset_name, version_num)
+        test_passed = tp.compare_pipeline(dataset_name, version_num) and test_passed
 
   if not ref_mode:
     print "All Tests Passed: ", test_passed

@@ -19,6 +19,7 @@ int run_image_pipeline( char* in_img_path,
   vector<vector<float>> ctrl_pts, weights, coefs;
   vector<vector<float>> rev_tone;
 
+
   // Load model parameters from file
   // NOTE: Ts, Tw, and TsTw read only forward data
   // ctrl_pts, weights, and coefs are either forward or backward
@@ -131,12 +132,34 @@ int run_image_pipeline( char* in_img_path,
   run_image_pipeline_cv(&opencv_in_mat, cv_stages, num_stages[1]);
 
   Image<float> opencv_out       = Mat2Image(&opencv_in_mat);
-  Func Image2Func               = make_Image2Func(&opencv_out);
+
+  // check if clamping is needed 
+  bool clamp_needed = false;
+  for (int i = 0; i < num_stages[2]; i++) { // check if stage requires clamping
+    PipelineStageFwd stage = fwd_stages[i];
+    if (stage == DemosSubSample || stage == DemosNN || stage == DemosInterp) {
+      clamp_needed = true;
+      break;
+    }
+  }
+
+  Func Image2Func;
+  if (clamp_needed) {
+    Func clamped("clamped");
+    Image2Func = BoundaryConditions::repeat_edge(opencv_out);
+    debug_print("clamping image...");
+  } 
+  else {
+    Image2Func = make_Image2Func(&opencv_out);
+  }
 
   // 3. forward pipelines
+  vector<int> qrtr_bin_factor = { 1 };
+  debug_print("qrtr_bin_factor BEFORE: " + to_string(qrtr_bin_factor[0]));
   lastFunc  = run_image_pipeline_fwd( &Image2Func,
                                       fwd_stages,
                                       num_stages[2],
+                                      qrtr_bin_factor,
                                       &rev_tone_h, // reuse rev tone
                                       num_ctrl_pts,         
                                       &ctrl_pts_h,
@@ -144,6 +167,7 @@ int run_image_pipeline( char* in_img_path,
                                       &coefs,
                                       &TsTw_tran
                                      );
+  debug_print("qrtr_bin_factor AFTER: " + to_string(qrtr_bin_factor[0]));
 
   // Scale back to 0-255 and represent in 8 bit fixed point
   Func descale                  = make_descale(&lastFunc);
@@ -155,7 +179,9 @@ int run_image_pipeline( char* in_img_path,
 
   // Use JIT compiler
   descale.compile_jit();
-  Image<uint8_t> output         = descale.realize(width,height,3);
+  Image<uint8_t> output         = descale.realize(width / qrtr_bin_factor[0],
+                                                  height/ qrtr_bin_factor[0],
+                                                  3);
 
   /////////////////////////////////////////////////////////////////////////////
   //                            Save the output
@@ -251,6 +277,7 @@ void run_image_pipeline_cv( Mat *InMat, PipelineStageCV cv_stages[], int num_sta
 Func run_image_pipeline_fwd(Func *in_func, 
                             PipelineStageFwd fwd_stages[], 
                             int num_stages,
+                            vector<int> &qrtr_bin_factor,
                             Image<float> *tone_h, 
                             int num_ctrl_pts, 
                             Image<float> *ctrl_pts_h, 
@@ -298,6 +325,7 @@ Func run_image_pipeline_fwd(Func *in_func,
       case Requant5: case Requant6: case Requant7: {
         int num_bits        = stage;
         out_func            = make_requant(&out_func, num_bits);
+        debug_print(num_bits);
         break;
       }
 
@@ -318,6 +346,8 @@ Func run_image_pipeline_fwd(Func *in_func,
 
       case QrtrResBinning: {
         out_func            = make_qrtr_res_binning( &out_func );
+        debug_print(to_string(qrtr_bin_factor[0]));
+        qrtr_bin_factor[0]  = qrtr_bin_factor[0] * 2;
         break;
       }
 
