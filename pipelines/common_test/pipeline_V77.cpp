@@ -30,9 +30,9 @@ int main(int argc, char **argv) {
   char * out_path    = argv[2];
 
   // Specify stages
-  PipelineStageRev rev_stages[]   = { };
+  PipelineStageRev rev_stages[]   = { RevScale };
   PipelineStageCV cv_stages[]     = { Remosaic };
-  PipelineStageFwd fwd_stages[]   = { DemosSubSample };
+  PipelineStageFwd fwd_stages[]   = { DemosSubSample, Descale };
 
   int num_stages[]  = { sizeof(rev_stages) / sizeof(rev_stages[0]), 
                         sizeof(cv_stages)  / sizeof(cv_stages[0]), 

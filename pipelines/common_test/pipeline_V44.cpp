@@ -31,9 +31,9 @@ int main(int argc, char **argv) {
   char * out_path    = argv[2];
 
   // Specify stages
-  PipelineStageRev rev_stages[]   = { };
+  PipelineStageRev rev_stages[]   = { RevRequant7 };
   PipelineStageCV cv_stages[]     = { };
-  PipelineStageFwd fwd_stages[]   = { Requant7 };
+  PipelineStageFwd fwd_stages[]   = { };
 
   int num_stages[]  = { sizeof(rev_stages) / sizeof(rev_stages[0]), 
                         sizeof(cv_stages)  / sizeof(cv_stages[0]), 

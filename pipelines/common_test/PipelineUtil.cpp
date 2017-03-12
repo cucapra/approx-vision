@@ -109,9 +109,7 @@ int run_image_pipeline( char* in_img_path,
   //                          Camera Pipeline
   /////////////////////////////////////////////////////////////////////////////
 
-  // Scale to 0-1 range and represent in floating point
-  Func scale                    = make_scale( &input );
-  Func lastFunc                 = scale;
+  Func lastFunc                 = make_Image2Func( &input );
 
   // 1. reverse pipelines
   lastFunc = run_image_pipeline_rev( &lastFunc, 
@@ -127,6 +125,7 @@ int run_image_pipeline( char* in_img_path,
 
   // 2. cv pipelines
   Image<float> opencv_in_image  = lastFunc.realize(width, height, 3);
+
   Mat opencv_in_mat             = Image2Mat(&opencv_in_image);
 
   run_image_pipeline_cv(&opencv_in_mat, cv_stages, num_stages[1]);
@@ -155,7 +154,7 @@ int run_image_pipeline( char* in_img_path,
 
   // 3. forward pipelines
   vector<int> qrtr_bin_factor = { 1 };
-  debug_print("qrtr_bin_factor BEFORE: " + to_string(qrtr_bin_factor[0]));
+
   lastFunc  = run_image_pipeline_fwd( &Image2Func,
                                       fwd_stages,
                                       num_stages[2],
@@ -167,10 +166,8 @@ int run_image_pipeline( char* in_img_path,
                                       &coefs,
                                       &TsTw_tran
                                      );
-  debug_print("qrtr_bin_factor AFTER: " + to_string(qrtr_bin_factor[0]));
-
-  // Scale back to 0-255 and represent in 8 bit fixed point
-  Func descale                  = make_descale(&lastFunc);
+  debug_print("qrtr_bin_factor: " + to_string(qrtr_bin_factor[0]));
+  
 
 
   /////////////////////////////////////////////////////////////////////////////
@@ -178,15 +175,15 @@ int run_image_pipeline( char* in_img_path,
   /////////////////////////////////////////////////////////////////////////////
 
   // Use JIT compiler
-  descale.compile_jit();
-  Image<uint8_t> output         = descale.realize(width / qrtr_bin_factor[0],
-                                                  height/ qrtr_bin_factor[0],
-                                                  3);
+  lastFunc.compile_jit();
+  Image<uint8_t> output         = lastFunc.realize( width / qrtr_bin_factor[0],
+                                                    height/ qrtr_bin_factor[0],
+                                                    3 );
 
   /////////////////////////////////////////////////////////////////////////////
   //                            Save the output
   /////////////////////////////////////////////////////////////////////////////
-  save_image(output, (std::string(out_img_path)+"output.png").c_str());
+  save_image( output, ( std::string(out_img_path) + "output.png" ).c_str() );
 
   return 0;
 }
@@ -207,9 +204,28 @@ Func run_image_pipeline_rev(Func *in_func,
 
   for (int i = 0; i < num_stages; i++) {
     PipelineStageRev stage = rev_stages[i];
-    debug_print(stage);
+    debug_print("rev stage: " + to_string(stage));
 
     switch( stage ) {
+      case RevScale: {
+        out_func                = make_scale( &out_func );
+        break;
+      }
+
+      case RevDescale: {
+        out_func                = make_descale( &out_func );
+        break;
+      }
+
+
+      case RevRequant1: case RevRequant2: case RevRequant3: case RevRequant4: 
+      case RevRequant5: case RevRequant6: case RevRequant7: {
+        int num_bits            = stage;
+        out_func                = make_requant(&out_func, num_bits);
+        debug_print("requant num bits: " + to_string(num_bits));
+        break;
+      }
+
       case RevToneMap: {
         out_func                = make_rev_tone_map(&out_func, rev_tone_h);
         out_func.compute_root();
@@ -248,7 +264,7 @@ void run_image_pipeline_cv( Mat *InMat, PipelineStageCV cv_stages[], int num_sta
 
   for (int i = 0; i < num_stages; i++) {
     PipelineStageCV stage = cv_stages[i];
-    debug_print(stage);
+    debug_print("cv stage:  " + to_string(stage));
 
     switch( stage ) {
       case Renoise: {
@@ -293,9 +309,19 @@ Func run_image_pipeline_fwd(Func *in_func,
 
   for (int i = 0; i < num_stages; i++) {
     PipelineStageFwd stage = fwd_stages[i];
-    debug_print(stage);
+    debug_print("fwd stage: " + to_string(stage));
 
     switch( stage ) {
+      case Scale: {
+        out_func            = make_scale( &out_func );
+        break;
+      }
+
+      case Descale: {
+        out_func            = make_descale( &out_func );
+        break;
+      }
+
       case ToneMap: {
         out_func            = make_tone_map(&out_func, tone_h);
         out_func.compute_root();

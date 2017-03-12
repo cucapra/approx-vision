@@ -23,8 +23,20 @@ using namespace std;
 // Camera pipeline stages
 enum PipelineStageRev { // reverse
   RevToneMap,
+
+  RevRequant1,       // linear requantize, 
+  RevRequant2,       // relies on the fact enum val is 1, 2, 3, ... here
+  RevRequant3,
+  RevRequant4,
+  RevRequant5,
+  RevRequant6,
+  RevRequant7,
+
   RevGamutMap,
-  RevTransform
+  RevTransform,
+
+  RevScale,
+  RevDescale
 };
 
 enum PipelineStageCV { // openCV
@@ -35,7 +47,7 @@ enum PipelineStageCV { // openCV
 };
 
 enum PipelineStageFwd { // forward
-  Transform,
+  ToneMap,
 
   Requant1,       // linear requantize, 
   Requant2,       // relies on the fact enum val is 1, 2, 3, ... here
@@ -46,13 +58,16 @@ enum PipelineStageFwd { // forward
   Requant7,
 
   GamutMap,
-  ToneMap,
+  Transform,
 
   DemosSubSample, // subsample demosaic
   DemosNN,        // nearest neighbor demosaic
   DemosInterp,    // bilinear interpolated demosaic
   QrtrResBinning, // quarter resolution pixel binning
-  PwlToneMap      // piecewise linear tone map
+  PwlToneMap,     // piecewise linear tone map
+
+  Scale,
+  Descale
 };
 
 /**

@@ -61,6 +61,13 @@ Func make_Image2Func ( Image<float> *InImage ) {
   return Image2Func;
 }
 
+Func make_Image2Func ( Image<uint8_t> *InImage ) {
+  Var x, y, c;
+  Func Image2Func("Image2Func");
+    Image2Func(x,y,c) = (*InImage)(x,y,c);
+  return Image2Func;
+}
+
 ///////////////////////////////////////////////////////////////////////////////////////
 // OpenCV Funcs for camera pipeline
 
@@ -259,6 +266,14 @@ Func make_scale( Image<uint8_t> *in_img ) {
   // Cast input to float and scale from 8 bit 0-255 range to 0-1 range
   Func scale("scale");
     scale(x,y,c) = cast<float>( (*in_img)(x,y,c) ) / 255;
+  return scale;
+}
+
+Func make_scale( Func *in_func ) {
+  Var x, y, c;
+  // Cast input to float and scale from 8 bit 0-255 range to 0-1 range
+  Func scale("scale");
+    scale(x,y,c) = cast<float>( (*in_func)(x,y,c) ) / 255;
   return scale;
 }
 

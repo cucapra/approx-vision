@@ -29,9 +29,9 @@ int main(int argc, char **argv) {
   char * out_path    = argv[2];
 
   // Specify stages
-  PipelineStageRev rev_stages[]   = { RevToneMap, RevGamutMap };
+  PipelineStageRev rev_stages[]   = { RevScale, RevToneMap, RevGamutMap };
   PipelineStageCV cv_stages[]     = { };
-  PipelineStageFwd fwd_stages[]   = { ToneMap };
+  PipelineStageFwd fwd_stages[]   = { ToneMap, Descale };
 
   int num_stages[]  = { sizeof(rev_stages) / sizeof(rev_stages[0]), 
                         sizeof(cv_stages)  / sizeof(cv_stages[0]), 
