@@ -12,7 +12,8 @@ import util_compare
 class TestPipeline(object):
 
   def __init__(self, datasets, datasets_bin, versions, pipeline_prefix, \
-                ref_dir, in_dir, out_dir):
+                ref_dir, in_dir, out_dir, \
+                cam_model_path, wb_index, num_ctrl_pts ):
     self.datasets         = datasets
     self.datasets_bin     = datasets_bin
     self.versions         = versions
@@ -23,6 +24,9 @@ class TestPipeline(object):
     self.in_dir           = in_dir
     self.out_dir          = out_dir
 
+    self.cam_model_path   = cam_model_path
+    self.wb_index         = wb_index
+    self.num_ctrl_pts     = num_ctrl_pts
 
   ''' Produce new image by running pipeline specified by dataset & version.
       Args
@@ -32,7 +36,7 @@ class TestPipeline(object):
 
       * uses images in in_dir and produces new images in out_dir 
   '''
-  def run_pipeline(self, dataset, version, rebuild):
+  def run_pipeline(self, dataset, version, rebuild, ref_mode):
 
     # check valid dataset & version
     if not(dataset in self.datasets) or not(version in self.versions):
@@ -73,6 +77,9 @@ class TestPipeline(object):
 
     # call pipeline
     command = [pipeline_filename, img_temp_in, out_dataset_version_dir + "/"]
+    if (not ref_mode):
+      command.extend([cam_model_path, wb_index, num_ctrl_pts])
+              
     subprocess.call(' '.join(command), shell=True)
 
     # convert back
@@ -164,25 +171,34 @@ def config_parser_list(parser, section, item):
     1. ref  : generates new reference files based on original pipeline files
     2. test : generates files based on new pipeline files, compares files with
               reference files
+    3. ref-test: run ref mode and then test mode
 
 '''
 
 if __name__ == "__main__":
-  ref_mode = False
+  modes = { # key: mode, value: (creating reference file required, modes to run)
+    "ref": (True, [True]), 
+    "test": (False, [False]),
+    "ref-test": (True, [True, False])
+  }
 
-  if len(sys.argv) != 2 or (sys.argv[1] != "ref" and sys.argv[1] != "test"):
+  if len(sys.argv) != 2 or not(sys.argv[1] in modes):
     print "\nUsages\n"
     print "\ttest-pipeline ref\t: generates new reference files\n"
     print "\ttest-pipeline test\t: generates new test files and compare them with reference files\n"
+    print "\ttest-pipeline ref-test\t: run ref mode and then test mode\n"
     sys.exit()
   
-  if sys.argv[1] == "ref":
-    sys.stdout.write("Are you sure you want to generate reference images? Type 'yes' to confirm.\n")
+  global_ref_mode, modes_to_run = modes[sys.argv[1]]
+
+  if global_ref_mode:
+    sys.stdout.write("\nAre you sure you want to generate reference images? \n")
+    sys.stdout.write("This action may over-write existing reference images. \n")
+    sys.stdout.write("Type 'yes' to confirm.\n")
+    sys.stdout.write("> ")
     user_input = raw_input().lower()
     if user_input != "yes":
       sys.exit()
-
-    ref_mode = True
 
   # config parsing
   config = ConfigParser.ConfigParser()
@@ -196,29 +212,48 @@ if __name__ == "__main__":
   ref_dir         = config.get("reference", "dataset_path")
   out_dir         = config.get("test", "dataset_path")
 
+  cam_model_path  = config.get("main", "cam_model_path")
+  wb_index        = config.get("main", "wb_index")
+  num_ctrl_pts    = config.get("main", "num_ctrl_pts")
+
   # test mode: generate test files based on original pipeline implementations
   #            then compare these files with corresponding reference files
 
   # ref mode: generate reference files based on original pipeline implementations
-  if ref_mode:
-    out_dir = ref_dir
-    pipeline_prefix = pipeline_prefix = config.get("main", "pipeline_prefix_ref")
 
-  tp = TestPipeline(datasets, datasets_bin, versions, pipeline_prefix, \
-                    ref_dir, in_dir, out_dir)
+  # ref-test mode: run ref mode and then test mode
 
-  # run pipeline for each dataset and version combination
-  test_passed = True
-  for version_num in versions:
-    rebuild = True
+  global_test_pass = True
+  for current_mode_is_ref in modes_to_run:
 
-    for dataset_name in datasets:
-      tp.run_pipeline(dataset_name, version_num, rebuild)
-      rebuild = False
+    if current_mode_is_ref: # is ref mode
+      out_dir         = ref_dir
+      pipeline_prefix = config.get("main", "pipeline_prefix_ref")
+    else:
+      out_dir         = config.get("test", "dataset_path")
+      pipeline_prefix = config.get("main", "pipeline_prefix")
 
-      if not ref_mode: # also compare files with ref files
-        test_passed = tp.compare_pipeline(dataset_name, version_num) and test_passed
 
-  if not ref_mode:
-    print "All Tests Passed: ", test_passed
+    tp = TestPipeline(datasets, datasets_bin, versions, pipeline_prefix, \
+                      ref_dir, in_dir, out_dir, \
+                      cam_model_path, wb_index, num_ctrl_pts)
+
+    # run pipeline for each dataset and version combination
+    local_test_pass = True
+    for version_num in versions:
+      rebuild = True
+
+      for dataset_name in datasets:
+        tp.run_pipeline(dataset_name, version_num, rebuild, current_mode_is_ref)
+        rebuild = False
+
+        if not current_mode_is_ref: # also compare files with ref files
+          local_test_pass = tp.compare_pipeline(dataset_name, version_num) and local_test_pass
+
+      if not current_mode_is_ref: 
+        print("Version" + str(version_num) + " Test Pass: " + str(local_test_pass) + "\n")
+        global_test_pass = global_test_pass and local_test_pass
+
+  print("\nGlobal Test Pass: " + str(global_test_pass))
+
 

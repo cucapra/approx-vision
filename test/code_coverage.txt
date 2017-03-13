@@ -4,7 +4,7 @@ RevGamutMap,      yes (V5, V11)
 RevTransform      yes (V5, V11)
 
 # OpenCV
-Renoise,          no  (introduces randomness by default)
+Renoise,          no  (no need, introduces randomness by default)
 Remosaic,         yes (V5, V11)
 GaussianBlurCV,   no  (no need)
 LloydRequant      yes (V76)

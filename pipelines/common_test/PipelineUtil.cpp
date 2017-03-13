@@ -1,9 +1,11 @@
 #include "PipelineUtil.h"
+#include "/approx-vision/pipelines/common_test/CameraModel.h"
 
 // Pipeline Utility 
 
 int run_image_pipeline( char* in_img_path, 
-                        char* out_img_path, 
+                        char* out_img_path,
+                        CameraModel camera_model,
                         enum PipelineStageRev  rev_stages[],
                         enum PipelineStageCV   cv_stages[],
                         enum PipelineStageFwd  fwd_stages[],
@@ -12,163 +14,96 @@ int run_image_pipeline( char* in_img_path,
   /////////////////////////////////////////////////////////////////////////////
   //                        Import and format model data
   /////////////////////////////////////////////////////////////////////////////
-  
-  // Declare model parameters
-  vector<vector<float>> Ts, Tw, TsTw;
-  vector<vector<float>> rev_ctrl_pts, rev_weights, rev_coefs;
-  vector<vector<float>> ctrl_pts, weights, coefs;
-  vector<vector<float>> rev_tone;
 
+  int num_ctrl_pts                    = camera_model.get_num_ctrl_pts();
 
-  // Load model parameters from file
-  // NOTE: Ts, Tw, and TsTw read only forward data
-  // ctrl_pts, weights, and coefs are either forward or backward
-  // tone mapping is always backward
-  // This is due to the the camera model format
-  Ts            = get_Ts       (cam_model_path);
-  Tw            = get_Tw       (cam_model_path, wb_index);
-  TsTw          = get_TsTw     (cam_model_path, wb_index);
-  rev_ctrl_pts  = get_ctrl_pts (cam_model_path, num_ctrl_pts, 0);
-  rev_weights   = get_weights  (cam_model_path, num_ctrl_pts, 0);
-  rev_coefs     = get_coefs    (cam_model_path, num_ctrl_pts, 0);
-  ctrl_pts      = get_ctrl_pts (cam_model_path, num_ctrl_pts, 1);
-  weights       = get_weights  (cam_model_path, num_ctrl_pts, 1);
-  coefs         = get_coefs    (cam_model_path, num_ctrl_pts, 1);
-  rev_tone      = get_rev_tone (cam_model_path);
+  vector<vector<float>> rev_coefs     = camera_model.get_cam_rev_coefs();
+  vector<vector<float>> coefs         = camera_model.get_cam_coefs();
+  vector<vector<float>> TsTw_tran     = camera_model.get_tstw_tran();
+  vector<vector<float>> TsTw_tran_inv = camera_model.get_tstw_tran_inv();
 
-  // Take the transpose of the color map and white balance transform for later use
-  vector<vector<float>> TsTw_tran     = transpose_mat(TsTw);
+  Image<float> rev_ctrl_pts_h         = camera_model.get_rev_ctrl_pts_h();
+  Image<float> rev_weights_h          = camera_model.get_rev_weights_h();
+  Image<float> ctrl_pts_h             = camera_model.get_ctrl_pts_h();
+  Image<float> weights_h              = camera_model.get_weights_h();
+  Image<float> rev_tone_h             = camera_model.get_rev_tone_h();
 
-  // Create an inverse of TsTw_tran
-  vector<vector<float>> TsTw_tran_inv = inv_3x3mat(TsTw_tran);
-
-  using namespace Halide;
-  using namespace Halide::Tools;
-  using namespace cv;
-
-  // Convert backward control points to a Halide image
-  int width  = rev_ctrl_pts[0].size();
-  int length = rev_ctrl_pts.size();
-  Image<float> rev_ctrl_pts_h(width,length);
-  for (int y=0; y<length; y++) {
-    for (int x=0; x<width; x++) {
-      rev_ctrl_pts_h(x,y) = rev_ctrl_pts[y][x];
-    }
-  }
-
-  // Convert backward weights to a Halide image
-  width  = rev_weights[0].size();
-  length = rev_weights.size();
-  Image<float> rev_weights_h(width,length);
-  for (int y=0; y<length; y++) {
-    for (int x=0; x<width; x++) {
-      rev_weights_h(x,y) = rev_weights[y][x];
-    }
-  }
-
-  // Convert control points to a Halide image
-  width  = ctrl_pts[0].size();
-  length = ctrl_pts.size();
-  Image<float> ctrl_pts_h(width,length);
-  for (int y=0; y<length; y++) {
-    for (int x=0; x<width; x++) {
-      ctrl_pts_h(x,y) = ctrl_pts[y][x];
-    }
-  }
-
-  // Convert weights to a Halide image
-  width  = weights[0].size();
-  length = weights.size();
-  Image<float> weights_h(width,length);
-  for (int y=0; y<length; y++) {
-    for (int x=0; x<width; x++) {
-      weights_h(x,y) = weights[y][x];
-    }
-  }
-
-  // Convert the reverse tone mapping function to a Halide image
-  width  = 3;
-  length = 256;
-  Image<float> rev_tone_h(width,length);
-  for (int y=0; y<length; y++) {
-    for (int x=0; x<width; x++) {
-      rev_tone_h(x,y) = rev_tone[y][x];
-    }
-  }
- 
   /////////////////////////////////////////////////////////////////////////////
   //                    Import and format input image
   /////////////////////////////////////////////////////////////////////////////
 
   // Load input image 
-  Image<uint8_t> input          = load_image(in_img_path);
-  width                         = input.width();
-  int height                    = input.height();
+  Image<uint8_t> input                = load_image(in_img_path);
+  int width                           = input.width();
+  int height                          = input.height();
 
   /////////////////////////////////////////////////////////////////////////////
   //                          Camera Pipeline
   /////////////////////////////////////////////////////////////////////////////
 
-  Func lastFunc                 = make_Image2Func( &input );
+  Func lastFunc                       = make_Image2Func( &input );
 
   // 1. reverse pipelines
-  lastFunc = run_image_pipeline_rev( &lastFunc, 
-                                     rev_stages,
-                                     num_stages[0],
-                                     &rev_tone_h,
-                                     num_ctrl_pts,
-                                     &rev_ctrl_pts_h,
-                                     &rev_weights_h,
-                                     &rev_coefs,
-                                     &TsTw_tran_inv
-                                    );
+  lastFunc                            = run_image_pipeline_rev(&lastFunc, 
+                                                               rev_stages,
+                                                               num_stages[0],
+                                                               &rev_tone_h,
+                                                               num_ctrl_pts,
+                                                               &rev_ctrl_pts_h,
+                                                               &rev_weights_h,
+                                                               &rev_coefs,
+                                                               &TsTw_tran_inv
+                                                              );
 
+  cout << "1\n";
   // 2. cv pipelines
-  Image<float> opencv_in_image  = lastFunc.realize(width, height, 3);
+  Image<float> opencv_in_image        = lastFunc.realize(width, height, 3);
+  cout << "2\n";
 
-  Mat opencv_in_mat             = Image2Mat(&opencv_in_image);
+  Mat opencv_in_mat                   = Image2Mat(&opencv_in_image);
+  cout << "3\n";
 
   run_image_pipeline_cv(&opencv_in_mat, cv_stages, num_stages[1]);
+  cout << "4\n";
 
-  Image<float> opencv_out       = Mat2Image(&opencv_in_mat);
+  Image<float> opencv_out             = Mat2Image(&opencv_in_mat);
+  cout << "5\n";
 
-  // check if clamping is needed 
+  // clamp if needed 
+  Func Image2Func;
   bool clamp_needed = false;
+
   for (int i = 0; i < num_stages[2]; i++) { // check if stage requires clamping
     PipelineStageFwd stage = fwd_stages[i];
     if (stage == DemosSubSample || stage == DemosNN || stage == DemosInterp) {
       clamp_needed = true;
+      Func clamped("clamped");
+      Image2Func = BoundaryConditions::repeat_edge(opencv_out);
+      debug_print("clamping image...");
       break;
     }
   }
 
-  Func Image2Func;
-  if (clamp_needed) {
-    Func clamped("clamped");
-    Image2Func = BoundaryConditions::repeat_edge(opencv_out);
-    debug_print("clamping image...");
-  } 
-  else {
+  if (!clamp_needed) {
     Image2Func = make_Image2Func(&opencv_out);
-  }
+  } 
+  cout << "6\n";
 
   // 3. forward pipelines
   vector<int> qrtr_bin_factor = { 1 };
 
-  lastFunc  = run_image_pipeline_fwd( &Image2Func,
-                                      fwd_stages,
-                                      num_stages[2],
-                                      qrtr_bin_factor,
-                                      &rev_tone_h, // reuse rev tone
-                                      num_ctrl_pts,         
-                                      &ctrl_pts_h,
-                                      &weights_h,
-                                      &coefs,
-                                      &TsTw_tran
-                                     );
+  lastFunc                            = run_image_pipeline_fwd(&Image2Func,
+                                                              fwd_stages,
+                                                              num_stages[2],
+                                                              qrtr_bin_factor,
+                                                              &rev_tone_h,
+                                                              num_ctrl_pts,
+                                                              &ctrl_pts_h,
+                                                              &weights_h,
+                                                              &coefs,
+                                                              &TsTw_tran
+                                                             );
   debug_print("qrtr_bin_factor: " + to_string(qrtr_bin_factor[0]));
-  
-
 
   /////////////////////////////////////////////////////////////////////////////
   //                              Scheduling
@@ -187,7 +122,6 @@ int run_image_pipeline( char* in_img_path,
 
   return 0;
 }
-
 
 
 Func run_image_pipeline_rev(Func *in_func, 
@@ -216,7 +150,6 @@ Func run_image_pipeline_rev(Func *in_func,
         out_func                = make_descale( &out_func );
         break;
       }
-
 
       case RevRequant1: case RevRequant2: case RevRequant3: case RevRequant4: 
       case RevRequant5: case RevRequant6: case RevRequant7: {

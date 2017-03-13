@@ -2,15 +2,17 @@
 #include <stdio.h>
 #include <math.h>
 
-#include "../common/pipe_stages.h"
-#include "../common/ImgPipeConfig.h"
-#include "../common/LoadCamModel.h"
-#include "../common/MatrixOps.h"
+#include "/approx-vision/pipelines/common/pipe_stages.h"
+#include "/approx-vision/pipelines/common/ImgPipeConfig.h"
+#include "/approx-vision/pipelines/common/LoadCamModel.h"
+#include "/approx-vision/pipelines/common/MatrixOps.h"
+
+#include "/approx-vision/pipelines/common_test/CameraModel.h"
 
 using namespace std;
 
 // uncomment for debug prints
-#define _DEBUG_MODE
+// #define _DEBUG_MODE
 
 #ifdef _DEBUG_MODE
 #define debug_print(x) cout << (x) << endl;
@@ -84,6 +86,7 @@ enum PipelineStageFwd { // forward
 **/
 int run_image_pipeline(     char* in_img_path,
                             char* out_img_path, 
+                            CameraModel cam_model,
                             enum PipelineStageRev rev_stages[],  // reverse stages
                             enum PipelineStageCV cv_stages[],    // CV stages
                             enum PipelineStageFwd fwd_stages[],  // forward stages
