@@ -6,7 +6,6 @@ import cv2
 
   source: http://www.pyimagesearch.com/2014/09/15/python-compare-two-images/
 '''
-
 def mse(imageA, imageB):
   # the 'Mean Squared Error' between the two images is the
   # sum of the squared difference between the two images;

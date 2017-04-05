@@ -174,7 +174,6 @@ def config_parser_list(parser, section, item):
     3. ref-test: run ref mode and then test mode
 
 '''
-
 if __name__ == "__main__":
   modes = { # key: mode, value: (creating reference file required, modes to run)
     "ref": (True, [True]), 
@@ -183,10 +182,10 @@ if __name__ == "__main__":
   }
 
   if len(sys.argv) != 2 or not(sys.argv[1] in modes):
-    print "\nUsages\n"
-    print "\ttest-pipeline ref\t: generates new reference files\n"
-    print "\ttest-pipeline test\t: generates new test files and compare them with reference files\n"
-    print "\ttest-pipeline ref-test\t: run ref mode and then test mode\n"
+    print "\nArguments:\n"
+    print "\tref\t: generates new reference files\n"
+    print "\ttest\t: generates new test files and compare them with reference files\n"
+    print "\tref-test\t: run ref mode and then test mode\n"
     sys.exit()
   
   global_ref_mode, modes_to_run = modes[sys.argv[1]]

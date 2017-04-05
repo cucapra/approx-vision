@@ -20,36 +20,9 @@ using namespace std;
 #define debug_print(x)
 #endif
 
-/* Define pipeline stages, and running pipeline stages */
-
-// Camera pipeline stages
-enum PipelineStageRev { // reverse
-  RevToneMap,
-
-  RevRequant1,       // linear requantize, 
-  RevRequant2,       // relies on the fact enum val is 1, 2, 3, ... here
-  RevRequant3,
-  RevRequant4,
-  RevRequant5,
-  RevRequant6,
-  RevRequant7,
-
-  RevGamutMap,
-  RevTransform,
-
-  RevScale,
-  RevDescale
-};
-
-enum PipelineStageCV { // openCV
-  Renoise,
-  Remosaic,
-  GaussianBlurCV,
-  LloydRequant
-};
-
-enum PipelineStageFwd { // forward
-  ToneMap,
+/* Pipeline Stages */
+enum PipelineStage {
+  Scale,  
 
   Requant1,       // linear requantize, 
   Requant2,       // relies on the fact enum val is 1, 2, 3, ... here
@@ -59,17 +32,26 @@ enum PipelineStageFwd { // forward
   Requant6,
   Requant7,
 
+  RevToneMap,
+  RevGamutMap,
+  RevTransform,
+
+  Renoise,
+  Remosaic,
+  GaussianBlurCV,
+  LloydRequant,
+
+  Descale,
+
   GamutMap,
   Transform,
+  ToneMap,
 
   DemosSubSample, // subsample demosaic
   DemosNN,        // nearest neighbor demosaic
   DemosInterp,    // bilinear interpolated demosaic
   QrtrResBinning, // quarter resolution pixel binning
-  PwlToneMap,     // piecewise linear tone map
-
-  Scale,
-  Descale
+  PwlToneMap      // piecewise linear tone map
 };
 
 /**
@@ -87,11 +69,29 @@ enum PipelineStageFwd { // forward
 int run_image_pipeline(     char* in_img_path,
                             char* out_img_path, 
                             CameraModel cam_model,
-                            enum PipelineStageRev rev_stages[],  // reverse stages
-                            enum PipelineStageCV cv_stages[],    // CV stages
-                            enum PipelineStageFwd fwd_stages[],  // forward stages
-                            int num_stages[]
+                            enum PipelineStage stages[], 
+                            int num_stages
                             );
+
+Func run_image_pipeline_stage(Func *in_func,
+                            PipelineStage stages[],
+                            int num_stages,
+                            int width,
+                            int height,
+                            int num_ctrl_pts,         // rbf ctrl pts
+                            Image<float> *rev_ctrl_pts_h, // rbf ctrl pts
+                            Image<float> *rev_tone_h, // rev tone map
+                            Image<float> *rev_weights_h,  // rbf ctrl pts
+                            vector<vector<float>> *rev_coefs, // rbf biases
+                            vector<vector<float>> *TsTw_tran_inv, // inv transform 
+                            Image<float> *ctrl_pts_h,
+                            vector<int> &qrtr_bin_factor, // qrtr binning factor
+                            Image<float> *tone_h,     // tone map
+                            Image<float> *weights_h,  // rbf ctrl pts
+                            vector<vector<float>> *coefs, // rbf biases
+                            vector<vector<float>> *TsTw_tran // transform 
+);
+
 
 /**
   Runs input Halide pipeline stage object through reverse pipeline stages
@@ -109,16 +109,16 @@ int run_image_pipeline(     char* in_img_path,
 
   Returns resulting Halide pipeline stage object
 **/
-Func run_image_pipeline_rev(Func *in_func, 
-                            PipelineStageRev rev_stages[],
-                            int num_stages,
-                            Image<float> *rev_tone_h, // rev tone map
-                            int num_ctrl_pts,         // rbf ctrl pts
-                            Image<float> *ctrl_pts_h, // rbf ctrl pts
-                            Image<float> *weights_h,  // rbf ctrl pts
-                            vector<vector<float>> *coefs, // rbf biases
-                            vector<vector<float>> *TsTw_tran_inv // inv transform 
-                            );
+// Func run_image_pipeline_rev(Func *in_func, 
+//                             PipelineStageRev rev_stages[],
+//                             int num_stages,
+//                             Image<float> *rev_tone_h, // rev tone map
+//                             int num_ctrl_pts,         // rbf ctrl pts
+//                             Image<float> *ctrl_pts_h, // rbf ctrl pts
+//                             Image<float> *weights_h,  // rbf ctrl pts
+//                             vector<vector<float>> *coefs, // rbf biases
+//                             vector<vector<float>> *TsTw_tran_inv // inv transform 
+//                             );
 
 /**
   Runs matrix representatation of image through openCV pipeline stages in place.
@@ -128,10 +128,10 @@ Func run_image_pipeline_rev(Func *in_func,
   num_stages    : length of cv_stages
 
 **/
-void run_image_pipeline_cv( Mat *InMat, 
-                            PipelineStageCV cv_stages[], 
-                            int num_stages 
-                            );
+// void run_image_pipeline_cv( Mat *InMat, 
+//                             PipelineStageCV cv_stages[], 
+//                             int num_stages 
+//                             );
 
 /**
   Runs input Halide pipeline stage object through forward pipeline stages
@@ -149,14 +149,14 @@ void run_image_pipeline_cv( Mat *InMat,
 
   Returns resulting Halide pipeline stage object
 **/
-Func run_image_pipeline_fwd(Func *in_func, 
-                            PipelineStageFwd fwd_stages[],
-                            int num_stages,
-                            vector<int> &qrtr_bin_factor, // qrtr binning factor
-                            Image<float> *tone_h,     // tone map
-                            int num_ctrl_pts,         // rbf ctrl pts
-                            Image<float> *ctrl_pts_h, // rbf ctrl pts
-                            Image<float> *weights_h,  // rbf ctrl pts
-                            vector<vector<float>> *coefs, // rbf biases
-                            vector<vector<float>> *TsTw_tran // transform 
-                            );
+// Func run_image_pipeline_fwd(Func *in_func, 
+//                             PipelineStageFwd fwd_stages[],
+//                             int num_stages,
+//                             vector<int> &qrtr_bin_factor, // qrtr binning factor
+//                             Image<float> *tone_h,     // tone map
+//                             int num_ctrl_pts,         // rbf ctrl pts
+//                             Image<float> *ctrl_pts_h, // rbf ctrl pts
+//                             Image<float> *weights_h,  // rbf ctrl pts
+//                             vector<vector<float>> *coefs, // rbf biases
+//                             vector<vector<float>> *TsTw_tran // transform 
+//                             );
