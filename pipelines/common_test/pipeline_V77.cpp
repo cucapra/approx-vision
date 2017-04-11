@@ -38,20 +38,14 @@ int main(int argc, char **argv) {
   CameraModel *cam_model = new CameraModel(cam_model_path, wb_index, num_ctrl_pts);
 
   // Specify stages
-  PipelineStageRev rev_stages[]   = { RevScale };
-  PipelineStageCV cv_stages[]     = { Remosaic };
-  PipelineStageFwd fwd_stages[]   = { DemosSubSample, Descale };
+  PipelineStage stages[] = { Scale, Remosaic, DemosSubSample, Descale };
 
-  int num_stages[]  = { sizeof(rev_stages) / sizeof(rev_stages[0]), 
-                        sizeof(cv_stages)  / sizeof(cv_stages[0]), 
-                        sizeof(fwd_stages) / sizeof(fwd_stages[0]) }; 
+  int num_stages = sizeof(stages) / sizeof(stages[0]);
 
   // run image pipeline with specified stages
   run_image_pipeline( in_img_path, 
                       out_path, 
                       *cam_model,
-                      rev_stages, 
-                      cv_stages, 
-                      fwd_stages, 
+                      stages,
                       num_stages );
 }

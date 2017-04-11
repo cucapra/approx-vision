@@ -43,14 +43,6 @@ int main(int argc, char **argv) {
 
   int num_stages = sizeof(stages) / sizeof(stages[0]);
 
-  // PipelineStageRev rev_stages[]   = { RevScale, RevToneMap, RevGamutMap, RevTransform };
-  // PipelineStageCV cv_stages[]     = { Remosaic };
-  // PipelineStageFwd fwd_stages[]   = { Transform, GamutMap, ToneMap, Descale };
-
-  // int num_stages[]  = { sizeof(rev_stages) / sizeof(rev_stages[0]), 
-  //                       sizeof(cv_stages)  / sizeof(cv_stages[0]), 
-  //                       sizeof(fwd_stages) / sizeof(fwd_stages[0]) }; 
-
   // run image pipeline with specified stages
   run_image_pipeline( in_img_path, 
                       out_path,

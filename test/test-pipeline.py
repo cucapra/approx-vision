@@ -215,13 +215,14 @@ if __name__ == "__main__":
   wb_index        = config.get("main", "wb_index")
   num_ctrl_pts    = config.get("main", "num_ctrl_pts")
 
-  # test mode: generate test files based on original pipeline implementations
-  #            then compare these files with corresponding reference files
+  '''
+  test mode: generate test files based on original pipeline implementations
+             then compare these files with corresponding reference files
 
-  # ref mode: generate reference files based on original pipeline implementations
+  ref mode: generate reference files based on original pipeline implementations
 
-  # ref-test mode: run ref mode and then test mode
-
+  ref-test mode: run ref mode and then test mode
+  '''
   global_test_pass = True
   for current_mode_is_ref in modes_to_run:
 

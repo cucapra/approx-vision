@@ -236,9 +236,8 @@ Func run_image_pipeline_stage(Func *in_func,
             out_func            = make_demosaic_interp(&clamped_func);
             break;
           }
-
-          break;
         }
+        break;
       }
 
       // changes qrtr_bin_factor implicitly
