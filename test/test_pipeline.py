@@ -251,7 +251,7 @@ if __name__ == "__main__":
           local_test_pass = tp.compare_pipeline(dataset_name, version_num) and local_test_pass
 
       if not current_mode_is_ref: 
-        print("Version" + str(version_num) + " Test Pass: " + str(local_test_pass) + "\n")
+        print("Pipeline Version " + str(version_num) + " Test Pass: " + str(local_test_pass) + "\n")
         global_test_pass = global_test_pass and local_test_pass
 
   print("\nGlobal Test Pass: " + str(global_test_pass))
