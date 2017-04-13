@@ -1,14 +1,13 @@
 
 #include <stdio.h>
 #include <math.h>
-#include <map>
 
 #include "/approx-vision/pipelines/common/pipe_stages.h"
 #include "/approx-vision/pipelines/common/ImgPipeConfig.h"
 #include "/approx-vision/pipelines/common/LoadCamModel.h"
 #include "/approx-vision/pipelines/common/MatrixOps.h"
 
-#include "/approx-vision/pipelines/common_test/core/CameraModel.h"
+#include "/approx-vision/pipelines/CLI/CameraModel.h"
 
 using namespace std;
 
@@ -54,7 +53,6 @@ enum PipelineStage {
   QrtrResBinning, // quarter resolution pixel binning
   PwlToneMap      // piecewise linear tone map
 };
-
 
 /**
   Runs image file through specified reverse, cv, forward pipeline stages

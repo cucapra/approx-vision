@@ -1,5 +1,5 @@
 #include "PipelineUtil.h"
-#include "/approx-vision/pipelines/common_test/core/CameraModel.h"
+#include "/approx-vision/pipelines/CLI/CameraModel.h"
 
 // Pipeline Utility 
 
@@ -113,7 +113,6 @@ Func run_image_pipeline_stage(Func *in_func,
     switch( stage ) {
 
       case Scale: {
-        debug_print("Scale");
         out_func                = make_scale( &out_func );
         break;
       }
@@ -127,14 +126,12 @@ Func run_image_pipeline_stage(Func *in_func,
       }
 
       case RevToneMap: {
-        debug_print("RevToneMap");
         out_func                = make_rev_tone_map(&out_func, rev_tone_h);
         out_func.compute_root();
         break;
       } 
 
       case RevGamutMap: {
-        debug_print("RevGamutMap");
         Func rev_gamut_map_ctrl = make_rbf_ctrl_pts(&out_func, 
                                                     num_ctrl_pts, 
                                                     rev_ctrl_pts_h, 
@@ -148,7 +145,6 @@ Func run_image_pipeline_stage(Func *in_func,
       }
 
       case RevTransform: {
-        debug_print("RevTransform");
         out_func                = make_transform(&out_func, TsTw_tran_inv);
         out_func.compute_root();
         break;
@@ -161,25 +157,21 @@ Func run_image_pipeline_stage(Func *in_func,
 
         switch ( stage ) {
           case Renoise: {
-            debug_print("Renoise");
             OpenCV_renoise(&opencv_in_mat);
             break;
           }
 
           case Remosaic: {
-            debug_print("Remosaic");
             OpenCV_remosaic(&opencv_in_mat);
             break;
           }
 
           case GaussianBlurCV: {
-            debug_print("GaussianBlurCV");
             OpenCV_gaussian_blur(&opencv_in_mat);
             break;
           }
 
           case LloydRequant: {
-            debug_print("LloydRequant");
             OpenCV_lloydmax_requant(&opencv_in_mat);
             break;
           } 
@@ -191,13 +183,11 @@ Func run_image_pipeline_stage(Func *in_func,
       }
 
       case Descale: {
-        debug_print("Descale");
         out_func            = make_descale( &out_func );
         break;
       }
 
       case GamutMap: {
-        debug_print("GamutMap");
         Func gamut_map_ctrl = make_rbf_ctrl_pts(&out_func, 
                                                 num_ctrl_pts, 
                                                 ctrl_pts_h, 
@@ -211,14 +201,12 @@ Func run_image_pipeline_stage(Func *in_func,
       }
 
       case Transform: {
-        debug_print("Transform");
         out_func            = make_transform(&out_func, TsTw_tran);
         out_func.compute_root();
         break;
       }
 
       case ToneMap: {
-        debug_print("ToneMap");
         out_func            = make_tone_map(&out_func, tone_h);
         out_func.compute_root();
         break;
@@ -235,19 +223,16 @@ Func run_image_pipeline_stage(Func *in_func,
         debug_print("clamping image...");
         switch (stage) {
           case DemosSubSample: {
-            debug_print("DemosSubSample");
             out_func            = make_demosaic_subsample(&clamped_func);
             break;
           }
 
           case DemosNN: {
-            debug_print("DemosNN");
             out_func            = make_demosaic_nn(&clamped_func);
             break;
           }
 
           case DemosInterp: {
-            debug_print("DemosInterp");
             out_func            = make_demosaic_interp(&clamped_func);
             break;
           }
@@ -257,7 +242,6 @@ Func run_image_pipeline_stage(Func *in_func,
 
       // changes qrtr_bin_factor implicitly
       case QrtrResBinning: {
-        debug_print("QrtrResBinning");
         out_func            = make_qrtr_res_binning( &out_func );
         debug_print(to_string(qrtr_bin_factor[0]));
         qrtr_bin_factor[0]  = qrtr_bin_factor[0] * 2;
@@ -265,7 +249,6 @@ Func run_image_pipeline_stage(Func *in_func,
       }
 
       case PwlToneMap: {
-        debug_print("PwlToneMap");
         out_func            = make_pwl_tone_map( &out_func );
         break;
       }

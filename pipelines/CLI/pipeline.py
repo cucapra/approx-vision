@@ -8,14 +8,25 @@ import subprocess, sys, shutil
 import pdb
 
 
-CONFIG_FILE = "/approx-vision/pipelines/common_test/config/config.ini"
-IMAGE_TEMP_IN = "/approx-vision/pipelines/common_test/temp/temp_in.png"
-IMAGE_TEMP_OUT = "/approx-vision/pipelines/common_test/temp/output/"
+CONFIG_FILE = "/approx-vision/pipelines/CLI/config/config.ini"
+IMAGE_TEMP_IN = "/approx-vision/pipelines/CLI/temp/temp_in.png"
+IMAGE_TEMP_OUT = "/approx-vision/pipelines/CLI/temp/output/"
 
 
 '''
-  Module for testing whether new pipeline files produce the same output
-  as original pipeline files.
+  Module for running input image through image processing pipeline.
+
+
+  Options:
+    path to input image file
+    path to output image directory
+    path to camera model
+    wb index
+    num of control points
+    pipeline version #
+    pipeline version stages
+    path to pipeline source cpp code
+    True to build pipeline source cpp code, False otherwise
 '''
 class Pipeline(object):
 
@@ -79,6 +90,8 @@ class Pipeline(object):
 ###############################################################################
 
 '''
+  Command line tool for converting image data via defined image pipeline
+
   argv:
     path to input image file
     path to output image directory
@@ -98,6 +111,7 @@ if __name__ == "__main__":
   num_ctrl_pts    = config.get("default", "num_ctrl_pts")
   pipeline_path   = config.get("default", "pipeline_path")
 
+  # args
   parser = argparse.ArgumentParser(description="Runs Pipeline")
   parser.add_argument("--build",
     default=True,
@@ -131,47 +145,3 @@ if __name__ == "__main__":
                       ast.literal_eval(args.build))
 
   pipeline.run()
-
-
-  '''
-
-  if len(sys.argv) != 6 or len(sys.argv) != 3:
-    print """Arguments: \n
-              path to input image file
-              path to output image directory
-              path to camera model
-              wb index
-              num of control points
-              version #
-
-              or 
-
-              path to input image file
-              path to output image directory
-              version # """
-    sys.exit()
-
-  use_default = len(sys.argv) == 3
-
-  # sanity check for argument inputs
-
-
-  # config parsing
-  config = ConfigParser.ConfigParser()
-  config.read(CONFIG_FILE)
-
-  input_path = sys.argv[0]
-  output_path = sys.argv[1]
-  version_num = sys.argv[2] if use_default else sys.argv[5]
-  version_stages = config_parser_list(config, "version", version_num)
-  cam_model_path = config.get("default", "cam_model_path") 
-  wb_index        = config.get("default", "wb_index") 
-  num_ctrl_pts    = config.get("default", "num_ctrl_pts")
-  pipeline_path = config.get("default", "pipeline_path")
-  if use_default:
-    cam_model_path = sys.argv[2]
-    wb_index = sys.argv[3]
-    num_ctrl_pts = sys.argv[4]
-
-
-  '''

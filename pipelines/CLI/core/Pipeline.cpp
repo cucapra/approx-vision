@@ -13,11 +13,21 @@ Args:
     path to camera model
     wb index
     num of control points
-    version #
+    list of stages to run deliminated by single space
+
+
+  ex)
+    /approx-vision/pipelines/CLI/temp/temp_in.png 
+    /approx-vision/pipelines/CLI/temp/output/ 
+    /approx-vision/cam_models/NikonD7000/ 
+    6 
+    3702 
+    Scale RevToneMap RevGamutMap RevTransform ToneMap Descale
 **/
 
 using namespace std;
 
+// mapping from string to PipelineStage enum
 map<string, PipelineStage> strToPipelineStage = {
   {"Scale",  Scale},
   {"Requant1", Requant1},
@@ -65,11 +75,11 @@ int main(int argc, char ** argv) {
 
   CameraModel *cam_model = new CameraModel(cam_model_path, wb_index, num_ctrl_pts);
 
+  // read in stages to run
   PipelineStage stages[argc - 6];
   for (int i = 6; i < argc; i++) {
     stages[i - 6] = convert_stage(argv[i]);
   }
-
   int num_stages = sizeof(stages) / sizeof(stages[0]);
 
   // run image pipeline with specified stages

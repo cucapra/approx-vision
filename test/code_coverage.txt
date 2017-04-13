@@ -28,12 +28,3 @@ DemosInterp,      yes (V79)
 QrtrResBinning,   yes (V76)
 PwlToneMap        yes (V76)
 
-
-
-TODO:
--finish up modular for parmaters
--test for all without noise(create new version if nece)
--configurable for camera model path
--upload csv to wiki 
--try camera pipeline
--CNN results

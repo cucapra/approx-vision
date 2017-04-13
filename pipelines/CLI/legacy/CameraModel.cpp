@@ -1,5 +1,5 @@
 
-#include "/approx-vision/pipelines/common_test/core/CameraModel.h"
+#include "/approx-vision/pipelines/CLI/CameraModel.h"
 
 using namespace std;
 
