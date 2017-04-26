@@ -12,5 +12,18 @@ RUN pip install Pillow
 RUN pip install ipdb
 RUN apt-get install python-matplotlib -y
 
+# Install extra processing dependencies
+RUN pip install --upgrade pip
+RUN pip install psutil
+RUN apt-get install rsync
+
+# Install LibRaw
+RUN wget https://www.libraw.org/data/LibRaw-0.18.2.tar.gz
+RUN tar xzvf LibRaw-0.18.2.tar.gz
+WORKDIR /root/packages/LibRaw-0.18.2
+RUN ./configure
+RUN make
+RUN make install
+
 # Reset our working directory 
 WORKDIR /
