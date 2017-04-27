@@ -24,6 +24,8 @@ WORKDIR /root/packages/LibRaw-0.18.2
 RUN ./configure
 RUN make
 RUN make install
+RUN /sbin/ldconfig -v
+
 
 # Reset our working directory 
 WORKDIR /
