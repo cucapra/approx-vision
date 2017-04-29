@@ -47,7 +47,7 @@ class Pipeline(object):
     self.build = build
 
   def run(self):
-    print "\nRunning pipeline version # " + str(self.version)
+    print "\nStarted running pipeline version # " + str(self.version)
 
     try:
 
