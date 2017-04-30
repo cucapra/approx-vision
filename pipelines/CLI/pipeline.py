@@ -72,13 +72,13 @@ class Pipeline(object):
       subprocess.call(" ".join(command), shell=True)
 
       # move output to output folder
-      out_file_path = os.path.join(self.out_dir_path, img_filename)
-      temp_out_file_path = IMAGE_TEMP_OUT + "output.png"
-      img = Image.open(temp_out_file_path)
-      img.save(out_file_path)
+      # out_file_path = os.path.join(self.out_dir_path, img_filename)
+      # temp_out_file_path = IMAGE_TEMP_OUT + "output.png"
+      # img = Image.open(temp_out_file_path)
+      # img.save(out_file_path)
 
-      command = ["rm", "-rf", IMAGE_TEMP_IN, temp_out_file_path ]
-      subprocess.call(" ".join(command), shell=True)
+      # command = ["rm", "-rf", IMAGE_TEMP_IN, temp_out_file_path ]
+      # subprocess.call(" ".join(command), shell=True)
 
       print "Finished running pipeline version # " + str(self.version)
 

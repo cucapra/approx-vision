@@ -40,8 +40,6 @@ if __name__ == "__main__":
     input_file = INPUT_DIR + name + ".NEF"
     convert_image(input_file, bit, CONVERT_WIDTH, CONVERT_HEIGHT)
 
-    print "um why segfault... "
-
     # move converted files to 
     move_image(input_file + CONVERT_SUFFIX, OUTPUT_DIR)
 

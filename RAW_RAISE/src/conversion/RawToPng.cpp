@@ -100,22 +100,17 @@ int main(int argc, char** argv )
 
   Mat raw_3C = Mat(
     imgdata.sizes.raw_height / 2, 
-    imgdata.sizes.raw_width / 2, 
+    imgdata.sizes.raw_width  / 2, 
     CV_32FC3  
   );
   vector<Mat> three_channels;
   split(raw_3C, three_channels);
-
-  cout << "after 3C init" << endl;
 
   // demosaic 1 channel to 3 channel
   // Note: OpenCV stores as BGR not RGB
   float scale_float = pow(2, 16);
   int row, col = 0;
   unsigned short b, g1, g2, r = 0;
-
-  cout << "before loop" << endl;  
-
   for (int y=0; y<raw_3C.rows; y++) {
     for (int x=0; x<raw_3C.cols; x++) {
       row = y * 2;
@@ -126,34 +121,21 @@ int main(int argc, char** argv )
       r  = raw_1C.at<unsigned short>(row + 1, col + 1);
 
       // BGR
-      three_channels[0].at<float>(row, col) = (float) b / scale_float;
-      three_channels[1].at<float>(row, col) = (float)((float) g1 + (float) g2) / scale_float;
-      three_channels[2].at<float>(row, col) = (float) r / scale_float;
+      three_channels[0].at<float>(y, x) = (float) b / scale_float;
+      three_channels[1].at<float>(y, x) = (float)((float) g1 + (float) g2) / scale_float;
+      three_channels[2].at<float>(y, x) = (float) r / scale_float;
+
     }
   }
-
-  cout << "after loop" << endl;
-
   merge(three_channels, raw_3C);
-
-  cout << "after merge" << endl;
 
   // resize image
   Size out_size = cv::Size(out_image_width, out_image_height);
-
-  Mat out_image = Mat(out_size, CV_32FC3);
-  out_image = Scalar(0);
-
-  cout << "after Size" << endl;
+  Mat out_image = Mat(out_image_height, out_image_width, CV_32FC3);
   cv::resize(raw_3C, out_image, out_size);
-
-  cout << "after resize" << endl;
 
   // Write the raw 1 channel representation to file
   imwrite( (std::string(in_path)+".3C.png").c_str(), out_image);
-
-  RawProcessor.recycle();
-  cout << "after image write" << endl;
 
   return 0;
 }
