@@ -10,7 +10,7 @@ import pdb
 
 CONFIG_FILE = "/approx-vision/pipelines/CLI/config/config.ini"
 IMAGE_TEMP_IN = "/approx-vision/pipelines/CLI/temp/temp_in.png"
-IMAGE_TEMP_OUT = "/approx-vision/pipelines/CLI/temp/output/"
+IMAGE_TEMP_OUT = "/approx-vision/pipelines/CLI/temp/output/output.png"
 
 
 '''
@@ -19,7 +19,7 @@ IMAGE_TEMP_OUT = "/approx-vision/pipelines/CLI/temp/output/"
 
   Options:
     path to input image file
-    path to output image directory
+    path to output image file
     path to camera model
     wb index
     num of control points
@@ -30,12 +30,12 @@ IMAGE_TEMP_OUT = "/approx-vision/pipelines/CLI/temp/output/"
 '''
 class Pipeline(object):
 
-  def __init__(self, in_file_path, out_dir_path, cam_model_path, \
+  def __init__(self, in_file_path, out_file_path, cam_model_path, \
                       wb_index, num_ctrl_pts, version, stages,
                       pipeline_path, build ):
     
     self.in_file_path = in_file_path
-    self.out_dir_path = os.path.dirname(out_dir_path) + "/"
+    self.out_file_path = out_file_path
     self.cam_model_path = cam_model_path
     self.wb_index = wb_index
     self.num_ctrl_pts = num_ctrl_pts
@@ -119,9 +119,9 @@ if __name__ == "__main__":
   parser.add_argument("--infile",
     default=IMAGE_TEMP_IN,
     help="Filepath to input image file")
-  parser.add_argument("--outdir",
+  parser.add_argument("--outfile",
     default=IMAGE_TEMP_OUT,
-    help="Path to output directory")
+    help="Filepath to output image file")
   parser.add_argument("--version",
     default=1,
     help="Pipeline version to run")
@@ -140,7 +140,7 @@ if __name__ == "__main__":
   version_stages = config.get("version", "V"+str(args.version))
   version_stages = " ".join(version_stages.split("/"))
 
-  pipeline = Pipeline(args.infile, args.outdir, args.campath, args.wb, args.ctrl, \
+  pipeline = Pipeline(args.infile, args.outfile, args.campath, args.wb, args.ctrl, \
                       args.version, version_stages, pipeline_path, \
                       ast.literal_eval(args.build))
 
