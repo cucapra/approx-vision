@@ -105,7 +105,7 @@ int main(int argc, char** argv )
       }
       // BGR
       three_channels[color_channel].at<float>(y, x) 
-            = (float)raw_1C.at<unsigned short>(y, x);
+            = (float)(raw_1C.at<unsigned short>(y, x) / scale_float);
     }
   }
   merge(three_channels, raw_3C);
