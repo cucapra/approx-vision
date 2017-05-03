@@ -64,7 +64,7 @@ if __name__ == "__main__":
 
     # resize png
     input_file = RAW_OUTPUT_DIR + name + ".png"
-    output_file = RAW_OUTPUT_DIR + name + ".png"
+    output_file = RAW_OUTPUT_DIR + name + "_resized" + ".png"
     resize(input_file, output_file, WIDTH, HEIGHT)
 
     # convert png to full pipeline png
@@ -81,7 +81,7 @@ if __name__ == "__main__":
 
     # resize full pipeline png
     input_file = FULL_OUTPUT_DIR + name + ".png"
-    output_file = FULL_OUTPUT_DIR + name + ".png"
+    output_file = FULL_OUTPUT_DIR + name + "_resized" + ".png"
     resize(input_file, output_file, WIDTH, HEIGHT)
 
     end = time.time()
