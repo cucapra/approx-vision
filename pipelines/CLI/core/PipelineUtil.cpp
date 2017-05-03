@@ -77,7 +77,7 @@ int run_image_pipeline( char* in_img_path,
   /////////////////////////////////////////////////////////////////////////////
   //                            Save the output
   /////////////////////////////////////////////////////////////////////////////
-  save_image( output, ( std::string(out_img_path)).c_str() );
+  save_image( output, (std::string(out_img_path) ).c_str() );
 
   return 0;
 }

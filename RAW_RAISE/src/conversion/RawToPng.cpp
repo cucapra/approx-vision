@@ -93,15 +93,17 @@ int main(int argc, char** argv )
   int color_channel = 0;
   for (int y=0; y<raw_3C.rows; y++) {
     for (int x=0; x<raw_3C.cols; x++) {
-      // BGR
+      // G R
+      // B G
       if (y % 2 == 0) { // even row
-        if (x % 2 == 0) { color_channel = 2; } // red
-        else {            color_channel = 1; } // green
+        if (x % 2 == 0) { color_channel = 1; } // green
+        else {            color_channel = 2; } // red
       }
       else { // odd row
-        if (x % 2 == 0) { color_channel = 1; } // green
-        else {            color_channel = 0; } // blue
+        if (x % 2 == 0) { color_channel = 0; } // blue
+        else {            color_channel = 1; } // green
       }
+      // BGR
       three_channels[color_channel].at<float>(y, x) 
             = (float)raw_1C.at<unsigned short>(y, x);
     }

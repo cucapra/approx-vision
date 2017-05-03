@@ -65,7 +65,7 @@ class Pipeline(object):
       os.chdir(self.pipeline_folder)
 
       # call pipeline
-      command = [self.pipeline_obj_path, IMAGE_TEMP_IN, self.out_dir_path]
+      command = [self.pipeline_obj_path, IMAGE_TEMP_IN, self.out_file_path]
       command.extend([self.cam_model_path, self.wb_index, self.num_ctrl_pts])
       command.append(self.stages)
       print " ".join(command)
@@ -114,7 +114,7 @@ if __name__ == "__main__":
   # args
   parser = argparse.ArgumentParser(description="Runs Pipeline")
   parser.add_argument("--build",
-    default=True,
+    default="True",
     help="'True' to compile pipeline source files, otherwise set to 'False'")
   parser.add_argument("--infile",
     default=IMAGE_TEMP_IN,
