@@ -26,16 +26,99 @@
 #include <opencv2/opencv.hpp>
 #include <libraw/libraw.h>
 
+#include "/approx-vision/pipelines/CLI/core/PipelineUtil.h"
+
 using namespace std;
 using namespace cv;
+
+
+int run_image_convert_pipeline( Image<float> *inImage, 
+                            char* out_img_path,
+                            enum PipelineStage stages[],
+                            int num_stages ) {
+
+  /////////////////////////////////////////////////////////////////////////////
+  //                        Import and format model data
+  /////////////////////////////////////////////////////////////////////////////
+  char cam_model_path[] = "/approx-vision/cam_models/NikonD7000/";
+  int wb_index          = 6;
+  int ctrl_pts          = 3702;
+  CameraModel * cam_model = new CameraModel(cam_model_path, wb_index, ctrl_pts);
+
+
+  int num_ctrl_pts                    = (cam_model)->get_num_ctrl_pts();
+
+  vector<vector<float>> rev_coefs     = (cam_model)->get_cam_rev_coefs();
+  vector<vector<float>> coefs         = (cam_model)->get_cam_coefs();
+  vector<vector<float>> TsTw_tran     = (cam_model)->get_tstw_tran();
+  vector<vector<float>> TsTw_tran_inv = (cam_model)->get_tstw_tran_inv();
+
+  Image<float> rev_ctrl_pts_h         = (cam_model)->get_rev_ctrl_pts_h();
+  Image<float> rev_weights_h          = (cam_model)->get_rev_weights_h();
+  Image<float> ctrl_pts_h             = (cam_model)->get_ctrl_pts_h();
+  Image<float> weights_h              = (cam_model)->get_weights_h();
+  Image<float> rev_tone_h             = (cam_model)->get_rev_tone_h();
+
+  /////////////////////////////////////////////////////////////////////////////
+  //                    Import and format input image
+  /////////////////////////////////////////////////////////////////////////////
+
+  int width                           = (*inImage).width();
+  int height                          = (*inImage).height();
+
+  /////////////////////////////////////////////////////////////////////////////
+  //                          Camera Pipeline
+  /////////////////////////////////////////////////////////////////////////////
+
+  Func resultFunc                       = make_Image2Func( inImage );
+
+  vector<int> qrtr_bin_factor = { 1 };
+
+  // run stages
+  resultFunc = run_image_pipeline_stage(&resultFunc,
+                                        stages,
+                                        num_stages,
+                                        width,
+                                        height,
+                                        num_ctrl_pts,
+                                        &rev_ctrl_pts_h,
+                                        &rev_tone_h,
+                                        &rev_weights_h,
+                                        &rev_coefs,
+                                        &TsTw_tran_inv,
+                                        &ctrl_pts_h,
+                                        qrtr_bin_factor,
+                                        &rev_tone_h,
+                                        &weights_h,
+                                        &coefs,
+                                        &TsTw_tran);
+
+  debug_print("qrtr_bin_factor: " + to_string(qrtr_bin_factor[0]));
+
+  /////////////////////////////////////////////////////////////////////////////
+  //                              Scheduling
+  /////////////////////////////////////////////////////////////////////////////
+
+  // Use JIT compiler
+  resultFunc.compile_jit();
+  Image<uint8_t> output         = resultFunc.realize( width / qrtr_bin_factor[0],
+                                                      height/ qrtr_bin_factor[0],
+                                                      3 );
+
+  /////////////////////////////////////////////////////////////////////////////
+  //                            Save the output
+  /////////////////////////////////////////////////////////////////////////////
+  save_image( output, (std::string(out_img_path) ).c_str() );
+
+  return 0;
+}
 
 int main(int argc, char** argv )
 {
   
-  // Inform user of usage method
-  if ( argc != 4 )
+  if ( argc != 6 )
   {
-      printf("usage: \n./RawToPng <path/to/input/image> <path/to/output/image> <raw file bitdepth>\n");
+      printf("usage: \n./RawToPng <path/to/input/image> <path/to/output/raw/image> <path/to/output/full/image> <resize factor> <raw file bitdepth>\n");
       return -1;
   }
 
@@ -48,11 +131,14 @@ int main(int argc, char** argv )
   int ret;
 
   // Path to input and output
-  const char * in_path = argv[1];
-  const char * out_path = argv[2];
+  char * in_path = argv[1];
+  char * out_path_raw = argv[2];
+  char * out_path_full = argv[3];
+
+  int resize_factor = atoi(argv[4]);
 
   // Bitdepth of raw input
-  int num_raw_bits = atoi(argv[3]);
+  int num_raw_bits = atoi(argv[5]);
 
   // Read in raw image with LibRaw
   if ((ret = RawProcessor.open_file(in_path)) != LIBRAW_SUCCESS)
@@ -79,9 +165,17 @@ int main(int argc, char** argv )
   int scale = 1 << (16-num_raw_bits);
   raw_1C = raw_1C * scale;
 
+  // resize for faster conversion
+  int height_resize = imgdata.sizes.raw_height / resize_factor * 2;
+  int width_resize = imgdata.sizes.raw_width / resize_factor * 2;
+  // cout << imgdata.sizes.raw_height << endl;
+  // cout << imgdata.sizes.raw_width << endl;
+  // cout << height_resize << endl;
+  // cout << width_resize << endl;
+
   Mat raw_3C = Mat(
-    imgdata.sizes.raw_height, 
-    imgdata.sizes.raw_width, 
+    height_resize, 
+    width_resize, 
     CV_32FC3  
   );
   vector<Mat> three_channels;
@@ -91,26 +185,43 @@ int main(int argc, char** argv )
   // Note: OpenCV stores as BGR not RGB
   float scale_float = pow(2, 16);
   int color_channel = 0;
-  for (int y=0; y<raw_3C.rows; y++) {
-    for (int x=0; x<raw_3C.cols; x++) {
-      // G R
-      // B G
-      if (y % 2 == 0) { // even row
-        if (x % 2 == 0) { color_channel = 1; } // green
-        else {            color_channel = 2; } // red
-      }
-      else { // odd row
-        if (x % 2 == 0) { color_channel = 0; } // blue
-        else {            color_channel = 1; } // green
-      }
-      // BGR
-      three_channels[color_channel].at<float>(y, x) 
+  int row = 0;
+  int col = 0;
+
+  for (int y = 0; y < raw_1C.rows; y += (resize_factor*2)) {
+    for (int x = 0; x < raw_1C.cols; x += (resize_factor*2)) {
+      row = y / (resize_factor) * 2;
+      col = x / (resize_factor) * 2;
+
+      three_channels[1].at<float>(row, col) 
             = (float)(raw_1C.at<unsigned short>(y, x)) / scale_float;
+
+      three_channels[2].at<float>(row, col+1) 
+            = (float)(raw_1C.at<unsigned short>(y, x+1)) / scale_float;
+
+      three_channels[0].at<float>(row+1, col) 
+            = (float)(raw_1C.at<unsigned short>(y+1, x)) / scale_float;
+
+      three_channels[1].at<float>(row+1, col+1) 
+            = (float)(raw_1C.at<unsigned short>(y+1, x+1)) / scale_float;
     }
   }
+
+
   merge(three_channels, raw_3C);
 
-  imwrite((std::string(out_path)).c_str(), raw_3C);
+  // run RAW
+  // mat to image
+  Image<float> inImg = Mat2Image( &raw_3C );
+  Image<float> inImg2 = Mat2Image( &raw_3C );
+  PipelineStage raw_stages[1] = {Descale};
+  run_image_convert_pipeline(&inImg, out_path_raw, raw_stages, 1);
+
+  // run FULL
+  // mat to image
+  PipelineStage full_stages[5] = {DemosSubSample, Transform, GamutMap, ToneMap, Descale};
+  run_image_convert_pipeline(&inImg2, out_path_full, full_stages, 5);
 
   return 0;
 }
+
