@@ -26,8 +26,9 @@ RUN make
 RUN make install
 RUN /sbin/ldconfig -v
 
-# Install scheduling
+# Install scheduling libraries
 RUN pip install futures
+RUN pip install findtools
 
 # Reset our working directory 
 WORKDIR /
