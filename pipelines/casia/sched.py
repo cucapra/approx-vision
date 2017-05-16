@@ -1,75 +1,73 @@
 #! /usr/bin/env python
 
+from __future__ import unicode_literals                                  
+from PIL import Image
+from subprocess import check_call                                        
+from concurrent import futures                                           
+import subprocess                                                        
+import os                                                                
+import io                                                                
 import subprocess
 import sys
-from subprocess import call
-import os
 from os import listdir
 from os.path import isfile, join
 import psutil
 import time
+import glob
 
-num_threads = 12
-datasetpath = '/datasets/casia/'
+vers_to_run = [ 3, 4, 5, 7, 8, 9,10,11,12,58,59,60,61,62,63,64]          
+in_vers     = [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 6, 6, 6, 6, 6, 6, 6] 
 
-vers_to_run = [ 2, 3, 4, 5, 6, 7, 8, 9,10,11,12,13]
-in_vers     = [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+num_threads = 16
 
-for i,version in enumerate(vers_to_run):
+# The directory to convert
+datasetpath   = '/datasets/casia/'
 
-  # Compile the new version to run
-  call('make --directory ../common/ version='+str(version),shell=True)
+def convert_img(img,in_version_path,out_version_path):
 
-  inputpath   = datasetpath + 'v' + str(in_vers[i]) + '/'
-  outputpath  = datasetpath + 'v' + str(version)+     '/'
+  # Make temp directory
+  temp_dir = 'temp_'+str(os.getpid())
+  subprocess.call('mkdir -p '+temp_dir,shell=True)
 
-  # Make the directory for this section  
-  subprocess.call(['mkdir',outputpath])
+  # Run the given pipeline on the png
+  subprocess.call('../common/pipeline_V'+str(version) + '.o ' +                     
+          in_version_path + img + ' ' +                    
+          temp_dir + '/', shell=True)
 
-  # Make a list of directories
-  dir_list = [f for f in listdir(inputpath)]
-  dir_list.sort()
- 
-  # Get number of directories
-  num_dirs = len(dir_list)
+  # Copy to the destination directory
+  subprocess.call('cp '+temp_dir+'/output.png '+
+          out_version_path + img,shell=True)
 
-  # Initialize bounds for running
-  dirs_per_thread = num_dirs / num_threads
-  start_dir_id    = 0
-  end_dir_id      = start_dir_id + dirs_per_thread - 1
-
-  # Establish empty set of processes
-  procs = []
-
-  # Spawn all threads
-  for x in range(0,num_threads):
-    # In case the number of images is not a multiple of the number of threads
-    if (num_dirs-start_dir_id <= 2*dirs_per_thread):
-      end_dir_id = num_dirs - 1
-
-    # Start a script to process a batch of the images
-    procs.append( subprocess.Popen("python thread-sched.py "+
-            str(version)+' '+
-            str(start_dir_id)+' '+
-            str(end_dir_id)+' '+
-            inputpath+' '+
-            outputpath+' '+
-            str(x)+' '
-                                   ,shell=True) )
-
-    # Update the bounds for the next script
-    start_dir_id = start_dir_id + dirs_per_thread
-    end_dir_id   = end_dir_id   + dirs_per_thread
+  # Delete temp directory
+  subprocess.call('rm -rf '+temp_dir,shell=True)
 
 
-  proc_states = [proc.poll() for proc in procs]
+for i, version in enumerate(vers_to_run):
 
-  # Check every minute to see if all threads have finished
-  while( all(proc_state == None for proc_state in proc_states)):
-    # Previous check to see if processes have completed
-    proc_states = [proc.poll() for proc in procs]
+  in_version = in_vers[i]
 
-    time.sleep(5)
+  in_version_path  = datasetpath+'v'+str(in_version)
+  out_version_path = datasetpath+'v'+str(version)
 
-  procs[:] = []
+  # Get list of sub-directories
+  subds = [ (s.rstrip("/"))[len(in_version_path):] for s in glob.glob(in_version_path+"/**")]
+
+  # Make directories for each output class
+  for subd in subds:
+    subprocess.call('mkdir -p '+out_version_path+subd,shell=True) 
+
+  # Get list of images to be converted
+  imgs = [ (img)[len(in_version_path):] for img in glob.glob(in_version_path + '/**/*.png')]
+
+  # Compile the converter 
+  subprocess.call('make --directory ../common/ version='+str(version),shell=True) 
+
+  with futures.ProcessPoolExecutor(max_workers=num_threads) as executor:
+    fs = [executor.submit(
+            convert_img,img,in_version_path,out_version_path)
+              for img in imgs]  
+    for i, f in enumerate(futures.as_completed(fs)):                   
+      # Write progress to error so that it can be seen                 
+      sys.stderr.write( \
+        "Converted Image: {} / {} \r".format(i, len(imgs)))   
 
