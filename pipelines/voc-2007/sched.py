@@ -14,14 +14,13 @@ from os.path import isfile, join
 import psutil
 import time
 
-vers_to_run = [ 1]
-in_vers     = [ 0]
+vers_to_run = [ 3, 4, 5, 7, 8, 9,10,11,12,58,59,60,61,62,63,64]          
+in_vers     = [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 6, 6, 6, 6, 6, 6, 6] 
 
-num_threads = 4
+num_threads = 14
 
 # The directory to convert
-datasetpath   = '/datasets/'
-
+datasetpath   = '/datasets/voc-2007/'
 
 def convert_img(file_name,in_img_dir,out_img_dir):
 
@@ -50,14 +49,14 @@ for i, version in enumerate(vers_to_run):
 
   in_version = in_vers[i]
 
-  #subprocess.call('make --directory ../common/ version='+str(version),shell=True) 
-  #
+  subprocess.call('make --directory ../common/ version='+str(version),shell=True) 
+  
   # Copy all but the JPEG images
-  #subprocess.call('rsync -av '+
-  #                 datasetpath+'/v'+str(in_version)+'/ '+
-  #                 datasetpath+'/v'+str(version)+' '+
-  #                 '--exclude VOC2007/JPEGImages',
-  #                 shell=True)
+  subprocess.call('rsync -av '+
+                   datasetpath+'/v'+str(in_version)+'/ '+
+                   datasetpath+'/v'+str(version)+' '+
+                   '--exclude VOC2007/JPEGImages',
+                   shell=True)
 
   in_img_dir  = datasetpath+'v'+str(in_version)+'/VOC2007/JPEGImages/'
   out_img_dir = datasetpath+'v'+str(version)+'/VOC2007/JPEGImages/'
