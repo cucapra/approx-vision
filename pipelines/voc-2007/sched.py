@@ -1,5 +1,12 @@
 #! /usr/bin/env python
 
+from __future__ import unicode_literals                                  
+from PIL import Image
+from subprocess import check_call                                        
+from concurrent import futures                                           
+import subprocess                                                        
+import os                                                                
+import io                                                                
 import subprocess
 import sys
 from os import listdir
@@ -7,83 +14,67 @@ from os.path import isfile, join
 import psutil
 import time
 
-vers_to_run = [42,43,66,68,70]
-in_vers     = [ 0, 0,13,13,13]
+vers_to_run = [ 1]
+in_vers     = [ 0]
 
-num_threads = 12
+num_threads = 4
 
 # The directory to convert
-datasetpath   = '/datasets/voc-2007/'
+datasetpath   = '/datasets/'
+
+
+def convert_img(file_name,in_img_dir,out_img_dir):
+
+  # Make temp directory
+  temp_dir = 'temp_'+str(os.getpid())
+  subprocess.call('mkdir -p '+temp_dir,shell=True)
+
+  # Convert to png #
+  im = Image.open(in_img_dir+file_name)
+  im.save(temp_dir+'/'+file_name+'_temp.png')
+
+  # Run the given pipeline on the png
+  subprocess.call('../common/pipeline_V'+str(version) + '.o ' +                     
+          temp_dir + '/' + file_name + '_temp.png ' +                     
+          temp_dir + '/', shell=True)
+
+  # Convert back to jpeg and save 
+  im = Image.open(temp_dir+'/'+'output.png')                                 
+  im.save(out_img_dir+'/'+file_name)  
+
+  # Delete temp directory
+  subprocess.call('rm -rf '+temp_dir,shell=True)
+
 
 for i, version in enumerate(vers_to_run):
 
   in_version = in_vers[i]
 
-  call('make --directory ../common/ version='+str(version),shell=True) 
-
+  #subprocess.call('make --directory ../common/ version='+str(version),shell=True) 
+  #
   # Copy all but the JPEG images
-  subprocess.call('rsync -av '+
-                   datasetpath+'/v'+str(in_version)+'/ '+
-                   datasetpath+'/v'+str(version)+' '+
-                   '--exclude VOC2007/JPEGImages',
-                   shell=True)
+  #subprocess.call('rsync -av '+
+  #                 datasetpath+'/v'+str(in_version)+'/ '+
+  #                 datasetpath+'/v'+str(version)+' '+
+  #                 '--exclude VOC2007/JPEGImages',
+  #                 shell=True)
 
   in_img_dir  = datasetpath+'v'+str(in_version)+'/VOC2007/JPEGImages/'
   out_img_dir = datasetpath+'v'+str(version)+'/VOC2007/JPEGImages/'
 
   # Make the directory for this section  
-  subprocess.call('mkdir '+out_img_dir,shell=True)
+  subprocess.call('mkdir -p '+out_img_dir,shell=True)
   
   # Get list of files in directory
   file_list = [f for f in listdir(in_img_dir) if 
                                           isfile(join(in_img_dir, f))]
   file_list.sort()
 
-  # Number of images in the directory
-  num_imgs = len(file_list)
+  with futures.ProcessPoolExecutor(max_workers=num_threads) as executor:
+    fs = [executor.submit(convert_img,file_name,in_img_dir,out_img_dir) for file_name in file_list]  
+    for i, f in enumerate(futures.as_completed(fs)):                   
+      # Write progress to error so that it can be seen                 
+      sys.stderr.write( \
+        "Converted Image: {} / {} \r".format(i, len(file_list)))   
 
-  # Initialize bounds for running the pipe
-  imgs_per_thread = num_imgs / num_threads
-  start_img_id = 0
-  end_img_id   = start_img_id + imgs_per_thread - 1
 
-  # Establish empty set of processes
-  procs = []
-
-  # For every split
-  for x in range(0,num_threads):
-    # Provide a temporary folder for this script
-    subprocess.call(['mkdir',in_img_dir+'/temp'+str(x)])
-
-    # In case the number of images is not a multiple of the number of threads
-    if (num_imgs-start_img_id <= 2*imgs_per_thread):
-      end_img_id = num_imgs - 1
-
-    # Start a script to process a subset of the images
-    procs.append( subprocess.Popen(["../common/run-pipe.py",
-                            str(version),
-                            str(start_img_id),
-                            str(end_img_id),
-                            in_img_dir,
-                            out_img_dir,
-                            str(x)
-                           ]) )
-
-    # Update the bounds for the next script
-    start_img_id = start_img_id + imgs_per_thread
-    end_img_id   = end_img_id   + imgs_per_thread
-
-  proc_states = [proc.poll() for proc in procs]
-
-  # Check every minute to see if all threads have finished
-  while( all(proc_state == None for proc_state in proc_states)):
-    # Previous check to see if processes have completed
-    proc_states = [proc.poll() for proc in procs]
-    time.sleep(5)
-
-  # For every split remove the temporary directories
-  for x in range(0,num_threads):
-    # Provide a temporary folder for this script
-    subprocess.call(['rm -rf',in_img_dir+'/temp'+str(x)])
-    
-  procs[:] = []
