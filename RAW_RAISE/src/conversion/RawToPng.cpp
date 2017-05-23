@@ -165,17 +165,9 @@ int main(int argc, char** argv )
   int scale = 1 << (16-num_raw_bits);
   raw_1C = raw_1C * scale;
 
-  // resize for faster conversion
-  int height_resize = imgdata.sizes.raw_height / resize_factor * 2;
-  int width_resize = imgdata.sizes.raw_width / resize_factor * 2;
-  // cout << imgdata.sizes.raw_height << endl;
-  // cout << imgdata.sizes.raw_width << endl;
-  // cout << height_resize << endl;
-  // cout << width_resize << endl;
-
   Mat raw_3C = Mat(
-    height_resize, 
-    width_resize, 
+    imgdata.sizes.raw_height, 
+    imgdata.sizes.raw_width, 
     CV_32FC3  
   );
   vector<Mat> three_channels;
@@ -188,32 +180,55 @@ int main(int argc, char** argv )
   int row = 0;
   int col = 0;
 
-  for (int y = 0; y < raw_1C.rows; y += (resize_factor*2)) {
-    for (int x = 0; x < raw_1C.cols; x += (resize_factor*2)) {
-      row = y / (resize_factor) * 2;
-      col = x / (resize_factor) * 2;
+  for (int y = 0; y < raw_3C.rows; y += 1) {
+    for (int x = 0; x < raw_3C.cols; x += 1) {
 
-      three_channels[1].at<float>(row, col) 
-            = (float)(raw_1C.at<unsigned short>(y, x)) / scale_float;
+      if (y % 2 == 0) {
+        if (x % 2 == 0) { // green
+          three_channels[1].at<float>(y, x) 
+                = (float)(raw_1C.at<unsigned short>(y, x)) / scale_float;          
+        } else {          // red
+          three_channels[2].at<float>(y, x) 
+                = (float)(raw_1C.at<unsigned short>(y, x)) / scale_float;
+        }
+      } else { 
+        if (x % 2 == 0) { // blue
+          three_channels[0].at<float>(y, x) 
+                = (float)(raw_1C.at<unsigned short>(y, x)) / scale_float;
+        } else {          // green
+          three_channels[1].at<float>(y, x) 
+                = (float)(raw_1C.at<unsigned short>(y, x)) / scale_float;
+        }
+      }
+      // row = y / (resize_factor) * 2;
+      // col = x / (resize_factor) * 2;
 
-      three_channels[2].at<float>(row, col+1) 
-            = (float)(raw_1C.at<unsigned short>(y, x+1)) / scale_float;
+      // three_channels[1].at<float>(row, col) 
+      //       = (float)(raw_1C.at<unsigned short>(y, x)) / scale_float;
 
-      three_channels[0].at<float>(row+1, col) 
-            = (float)(raw_1C.at<unsigned short>(y+1, x)) / scale_float;
+      // three_channels[2].at<float>(row, col+1) 
+      //       = (float)(raw_1C.at<unsigned short>(y, x+1)) / scale_float;
 
-      three_channels[1].at<float>(row+1, col+1) 
-            = (float)(raw_1C.at<unsigned short>(y+1, x+1)) / scale_float;
+      // three_channels[0].at<float>(row+1, col) 
+      //       = (float)(raw_1C.at<unsigned short>(y+1, x)) / scale_float;
+
+      // three_channels[1].at<float>(row+1, col+1) 
+      //       = (float)(raw_1C.at<unsigned short>(y+1, x+1)) / scale_float;
     }
   }
 
 
   merge(three_channels, raw_3C);
 
+  // resized
+  Mat inImgResize = raw_3C.clone();
+  resize(inImgResize, inImgResize, Size( 
+    imgdata.sizes.raw_width / resize_factor, imgdata.sizes.raw_height / resize_factor));
+
   // run RAW
   // mat to image
   Image<float> inImg = Mat2Image( &raw_3C );
-  Image<float> inImg2 = Mat2Image( &raw_3C );
+  Image<float> inImg2 = Mat2Image( &inImgResize );
   PipelineStage raw_stages[1] = {Descale};
   run_image_convert_pipeline(&inImg, out_path_raw, raw_stages, 1);
 

@@ -17,7 +17,7 @@ FULL_OUTPUT_DIR = "/approx-vision/RAW_RAISE/data/dataset_full/"
 WIDTH = "299"
 HEIGHT = "299"
 
-RESIZE_FACTOR = "8"
+RESIZE_FACTOR = "1"
 
 def execute(command):
   subprocess.call(" ".join(command), shell=True)
