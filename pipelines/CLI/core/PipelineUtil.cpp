@@ -31,15 +31,8 @@ int run_image_pipeline( char* in_img_path,
   /////////////////////////////////////////////////////////////////////////////
 
   // Load input image 
-  // Image<uint8_t> input                = load_image(in_img_path);
-  Image<float> input                = load_image(in_img_path);
-  for(int y=0; y < 2; y++){
-    for(int x=0; x < 2; x++){
-      debug_print(input(x,y,0));
-      debug_print(input(x,y,1));
-      debug_print(input(x,y,2));
-    }
-  }
+  Image<uint8_t> input                = load_image(in_img_path);
+  // Image<float> input                = load_image(in_img_path);
 
   int width                           = input.width();
   int height                          = input.height();
