@@ -16,9 +16,6 @@ All code in this git repository is released under the MIT license. If you use th
   volume    = {abs/1705.04352},
   year      = {2017},
   url       = {http://arxiv.org/abs/1705.04352},
-  timestamp = {Wed, 07 Jun 2017 14:40:43 +0200},
-  biburl    = {http://dblp.uni-trier.de/rec/bib/journals/corr/BucklerJS17},
-  bibsource = {dblp computer science bibliography, http://dblp.org}
 }
 ```
 
