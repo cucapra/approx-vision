@@ -30,6 +30,6 @@ All available documentation for this code can be found in [this GitHub repo's Wi
 # Contributors 
 
  * Mark Buckler (mab598@cornell.edu)
- * Suren Jayasuriya (sj498@cornell.edu)
+ * Suren Jayasuriya (sjayasur@andrew.cmu.edu)
  * Adrian Sampson (asampson@cornell.edu)
  * Taehoon Lee (tl353@cornell.edu)
