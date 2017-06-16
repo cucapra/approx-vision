@@ -1,0 +1,30 @@
+# Reverse
+RevToneMap,       yes (V5, V7, V11)
+RevGamutMap,      yes (V5, V11)
+RevTransform      yes (V5, V11)
+
+# OpenCV
+Renoise,          no  (no need, introduces randomness by default)
+Remosaic,         yes (V5, V11)
+GaussianBlurCV,   no  (no need)
+LloydRequant      yes (V76)
+
+# Forward
+Requant1,         yes (V50)
+Requant2,         yes (V49)
+Requant3,         yes (V48)
+Requant4,         yes (V47)
+Requant5,         yes (V46)
+Requant6,         yes (V45)
+Requant7,         yes (V44)
+
+Transform,        yes (V11)
+GamutMap,         yes (V9, V11)
+ToneMap,          yes (V9, V11, V12)
+
+DemosSubSample,   yes (V77)
+DemosNN,          yes (V78)
+DemosInterp,      yes (V79)
+QrtrResBinning,   yes (V76)
+PwlToneMap        yes (V76)
+

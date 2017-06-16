@@ -61,6 +61,13 @@ Func make_Image2Func ( Image<float> *InImage ) {
   return Image2Func;
 }
 
+Func make_Image2Func ( Image<uint8_t> *InImage ) {
+  Var x, y, c;
+  Func Image2Func("Image2Func");
+    Image2Func(x,y,c) = (*InImage)(x,y,c);
+  return Image2Func;
+}
+
 ///////////////////////////////////////////////////////////////////////////////////////
 // OpenCV Funcs for camera pipeline
 
@@ -262,6 +269,14 @@ Func make_scale( Image<uint8_t> *in_img ) {
   return scale;
 }
 
+Func make_scale( Func *in_func ) {
+  Var x, y, c;
+  // Cast input to float and scale from 8 bit 0-255 range to 0-1 range
+  Func scale("scale");
+    scale(x,y,c) = cast<float>( (*in_func)(x,y,c) ) / 255;
+  return scale;
+}
+
 Func make_descale( Func *in_func ) {
   Var x, y, c;
   // de-scale from 0-1 range to 0-255 range, and cast to 8 bit 
@@ -276,6 +291,17 @@ Func make_requant( Image<uint8_t> *in_img, int num_bits ) {
 
   Func requant("requant");
     Expr right_shift = (*in_img)(x,y,c) / scale_val;
+    requant(x,y,c)   = right_shift * scale_val;
+
+  return requant;
+}
+
+Func make_requant( Func *in_func, int num_bits ) {
+  Var x, y, c;
+  int scale_val = pow(2,(8-num_bits));
+
+  Func requant("requant");
+    Expr right_shift = (*in_func)(x,y,c) / scale_val;
     requant(x,y,c)   = right_shift * scale_val;
 
   return requant;
