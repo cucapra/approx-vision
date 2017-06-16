@@ -23,9 +23,9 @@ All code in this git repository is released under the MIT license. If you use th
 }
 ```
 
-# Compiling, Running, and General usage
+# Compiling, Running, and General Usage
 
-All available documentation for this code can be found in our [GitHub Wiki](https://github.com/cucapra/approx-vision/wiki). Those of you who just want to run a simple example or are just getting started will find our [FAQ](https://github.com/cucapra/approx-vision/wiki/Getting-Started-FAQ) particularly helpful.
+All available documentation for this code can be found in [this GitHub repo's Wiki](https://github.com/cucapra/approx-vision/wiki). Those of you who just want to run a simple example or are just getting started will find our [FAQ](https://github.com/cucapra/approx-vision/wiki/Getting-Started-FAQ) particularly helpful.
 
 # Contributors 
 
