@@ -1,6 +1,5 @@
 
 # The Approximate Vision Project
-=============================================================
 
 This is the public release of code developed for the paper "Reconfiguring the Imaging Pipeline for Computer Vision" by Mark Buckler, Suren Jayasuriya, and Adrian Sampson. It contains the Configurable & Reversible Imaging Pipeline (CRIP) described in the paper, documentaion for how to run and edit the CRIP for your own use, and Dockerfiles and instructions for how to run our supported computer vision benchmarks.
 
@@ -24,8 +23,9 @@ All code in this git repository is released under the MIT license. If you use th
 }
 ```
 
+# Compiling, Running, and General usage
 
-
+All available documentation for this code can be found in our [GitHub Wiki](https://github.com/cucapra/approx-vision/wiki). Those of you who just want to run a simple example or are just getting started will find our [FAQ](https://github.com/cucapra/approx-vision/wiki/Getting-Started-FAQ) particularly helpful.
 
 # Contributors 
 
