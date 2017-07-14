@@ -31,7 +31,7 @@ WORKDIR /root/py-faster-rcnn/caffe-fast-rcnn
 RUN git remote add caffe https://github.com/BVLC/caffe.git
 RUN git fetch caffe
 RUN git merge -X theirs caffe/master
-RUN sed '29d' include/caffe/layers/python_layer.hpp
+RUN sed -i '29d' include/caffe/layers/python_layer.hpp
 RUN mkdir build
 WORKDIR /root/py-faster-rcnn/caffe-fast-rcnn/build
 RUN cmake ..
