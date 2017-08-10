@@ -1,21 +1,19 @@
 # The Approximate Vision Project
 
-This is the public release of code developed for the paper [Reconfiguring the Imaging Pipeline for Computer Vision](https://arxiv.org/abs/1705.04352) by Mark Buckler, Suren Jayasuriya, and Adrian Sampson. It contains the Configurable & Reversible Imaging Pipeline (CRIP) described in the paper, documentation on how to run and edit the CRIP for your own use, and both Dockerfiles and instructions for how to run our supported computer vision benchmarks.
+This is the public release of code developed for the paper ["Reconfiguring the Imaging Pipeline for Computer Vision"][iccv] by Mark Buckler, Suren Jayasuriya, and Adrian Sampson. It contains the Configurable & Reversible Imaging Pipeline (CRIP) described in the paper, documentation on how to run and edit the CRIP for your own use, and both Dockerfiles and instructions for how to run our supported computer vision benchmarks.
+
+[iccv]: https://capra.cs.cornell.edu/research/visionmode.html
 
 # License and Citation
 
-All code in this git repository is released under the MIT license. If you use this code in your research please cite the following paper:
+All code in this git repository is released under the MIT license. If you use this code in your research, please our ICCV 2017 paper:
 
 ```
-@article{DBLP:journals/corr/BucklerJS17,
-  author    = {Mark Buckler and
-               Suren Jayasuriya and
-               Adrian Sampson},
-  title     = {Reconfiguring the Imaging Pipeline for Computer Vision},
-  journal   = {CoRR},
-  volume    = {abs/1705.04352},
-  year      = {2017},
-  url       = {http://arxiv.org/abs/1705.04352},
+@inproceedings{buckler-iccv2017,
+    author = {Mark Buckler and Suren Jayasuriya and Adrian Sampson},
+    title = {Reconfiguring the Imaging Pipeline for Computer Vision},
+    booktitle = {The IEEE International Conference on Computer Vision (ICCV)},
+    year = {2017},
 }
 ```
 
